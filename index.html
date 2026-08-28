@@ -134,8 +134,7 @@
     }
 
     .section.active { display: block; }
-    .nota-preview { font-size:13px; color:var(--text); max-height:80px; overflow:hidden; position:relative; }
-    .nota-preview::after { content:''; position:absolute; bottom:0; left:0; right:0; height:24px; background:linear-gradient(transparent, var(--surface)); }
+    .nota-preview { font-size:13px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 
     @keyframes fadeUp {
       from { opacity: 0; transform: translateY(10px); }
@@ -5677,12 +5676,19 @@
     }
   }
 
+  function _primeiraLinhaTexto(texto) {
+    if (!texto) return '';
+    const linha = (texto.split('\n').find(l => l.trim() !== '') || '').trim();
+    // Remove marcadores de formatação (não faz sentido em preview de 1 linha)
+    return linha.replace(/^- /, '').replace(/\*\*/g, '').replace(/\[([^\]]+)\]/g, '$1');
+  }
+
   function _makeCurCard(c, color) {
     const realIdx = db.curiosidades.indexOf(c);
     const d = new Date(c.criado);
     const dateStr = d.toLocaleDateString('pt-BR',{day:'numeric',month:'short',year:'numeric'});
     const catInfo = CUR_CATEGORIAS.find(x => x.val === (c.categoria||'Curiosidades'));
-    const preview = renderNotaTexto((c.texto||'').slice(0,300) + ((c.texto||'').length>300?'…':''));
+    const preview = _primeiraLinhaTexto(c.texto);
 
     const card = document.createElement('div');
     card.style.cssText = `background:var(--surface);border:1px solid var(--border);border-left:3px solid ${color};border-radius:var(--radius);padding:12px 14px;margin-bottom:8px;cursor:pointer`;
@@ -5693,8 +5699,8 @@
             <span style="font-size:10px;font-weight:600;color:${color};text-transform:uppercase">${catInfo?.icon||''} ${c.categoria||'Curiosidades'}</span>
             <span style="font-size:10px;color:var(--muted)">${dateStr}</span>
           </div>
-          <div style="font-weight:600;font-size:14px;margin-bottom:4px">${c.titulo||'Sem título'}</div>
-          ${c.passagem?`<div style="font-size:11px;color:var(--accent4);margin-bottom:6px">📖 ${c.passagem}</div>`:''}
+          <div style="font-weight:600;font-size:14px;margin-bottom:3px">${c.titulo||'Sem título'}</div>
+          ${c.passagem?`<div style="font-size:11px;color:var(--accent4);margin-bottom:3px">📖 ${c.passagem}</div>`:''}
           <div class="nota-preview">${preview}</div>
         </div>
         <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0">
