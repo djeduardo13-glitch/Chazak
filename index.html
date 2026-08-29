@@ -1112,7 +1112,7 @@
         <div class="card" style="display:flex;flex-direction:column;gap:8px">
           <div style="display:flex;justify-content:space-between;align-items:center">
             <span style="font-size:13px;color:var(--muted)">Versão</span>
-            <span style="font-size:13px;font-weight:500">5.5.5</span>
+            <span style="font-size:13px;font-weight:500">5.5.6</span>
           </div>
           <div style="display:flex;justify-content:space-between;align-items:center">
             <span style="font-size:13px;color:var(--muted)">Jovens ativos</span>
@@ -4180,7 +4180,7 @@
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     const today = new Date().toISOString().slice(0,10).replace(/-/g,'_');
-    a.download = `Chazak_backup_${today}_(v5.5.5).json`;
+    a.download = `Chazak_backup_${today}_(v5.5.6).json`;
     a.click();
   }
 
@@ -4545,6 +4545,10 @@
   // (funciona offline depois da 1ª vez). Toque no destaque abre uma
   // janelinha com o texto do versículo.
   // ══════════════════════════════════════════
+  // ── Configuração centralizada da API (fácil trocar domínio/versão no futuro) ──
+  const BIBLIA_API_BASE = 'https://abibliadigital.api.br/api';
+  const BIBLIA_VERSAO = 'acf';
+
   const BIBLIA_ABREV = {
     'gênesis':'gn','êxodo':'ex','levítico':'lv','números':'nm','deuteronômio':'dt',
     'josué':'js','juízes':'jz','rute':'rt','1 samuel':'1sm','2 samuel':'2sm',
@@ -4566,53 +4570,87 @@
     return ref.trim().replace(/\s+/g, ' ');
   }
 
-  // Separa "Livro Cap:Vers" em partes, aceitando nomes com acento/maiúsculas variados
+  // Chave de cache por versículo individual (permite reaproveitar versículos
+  // já buscados anteriormente, mesmo que a busca original tenha sido um intervalo)
+  function chaveVersiculo(abrev, cap, num) {
+    return `${BIBLIA_VERSAO}|${abrev}|${cap}|${num}`;
+  }
+
+  // Separa "Livro Cap:Vers" ou "Livro Cap:VersInicio-VersFim" em partes,
+  // aceitando nomes com acento/maiúsculas variados
   function parseReferencia(ref) {
-    const m = ref.trim().match(/^(.+?)\s(\d{1,3}):(\d{1,3})$/);
+    const m = ref.trim().match(/^(.+?)\s(\d{1,3}):(\d{1,3})(?:-(\d{1,3}))?$/);
     if (!m) return null;
     const nomeLivro = m[1].trim().toLowerCase();
     const abrev = BIBLIA_ABREV[nomeLivro];
     if (!abrev) return null;
-    return { abrev, cap: m[2], vers: m[3] };
+    const cap = parseInt(m[2], 10);
+    const versInicio = parseInt(m[3], 10);
+    const versFim = m[4] ? parseInt(m[4], 10) : versInicio;
+    if (versFim < versInicio) return null;
+    return { abrev, cap, versInicio, versFim };
   }
 
-  async function buscarVersiculoAPI(ref) {
-    const parsed = parseReferencia(ref);
-    if (!parsed) return { erro: true, motivo: 'Livro não reconhecido' };
+  // Busca os versículos de uma referência (simples ou intervalo).
+  // Estratégia: 1 pedido ao capítulo inteiro, extrai só o que falta,
+  // nunca faz 1 pedido por versículo. Reaproveita cache sempre que possível.
+  async function buscarVersiculosAPI(parsed) {
+    if (!parsed) return { erro: true, motivo: 'Referência bíblica inválida' };
+    if (!db.versiculosCache) db.versiculosCache = {};
+
+    const faltantes = [];
+    for (let n = parsed.versInicio; n <= parsed.versFim; n++) {
+      if (!db.versiculosCache[chaveVersiculo(parsed.abrev, parsed.cap, n)]) faltantes.push(n);
+    }
+    if (faltantes.length === 0) return { erro: false }; // já estava tudo em cache
+
     try {
-      const res = await fetch(`https://www.abibliadigital.com.br/api/verses/acf/${parsed.abrev}/${parsed.cap}/${parsed.vers}`);
-      if (!res.ok) return { erro: true, motivo: 'Não encontrado (verifica capítulo/versículo)' };
-      const data = await res.json();
-      if (!data.text) return { erro: true, motivo: 'Resposta sem texto' };
-      return { erro: false, texto: data.text.trim() };
+      const url = `${BIBLIA_API_BASE}/verses/${BIBLIA_VERSAO}/${parsed.abrev}/${parsed.cap}`;
+      const res = await fetch(url);
+      if (!res.ok) {
+        if (res.status === 404) return { erro: true, motivo: 'Capítulo ou versículo não encontrado' };
+        return { erro: true, motivo: 'Resposta inválida da API da Bíblia' };
+      }
+      let data;
+      try { data = await res.json(); } catch { return { erro: true, motivo: 'Resposta inválida da API da Bíblia' }; }
+      if (!data || !Array.isArray(data.verses)) return { erro: true, motivo: 'Resposta inválida da API da Bíblia' };
+
+      let algumEncontrado = false;
+      faltantes.forEach(n => {
+        const v = data.verses.find(x => x.number === n);
+        if (v && v.text) {
+          db.versiculosCache[chaveVersiculo(parsed.abrev, parsed.cap, n)] = { texto: v.text.trim(), buscadoEm: new Date().toISOString() };
+          algumEncontrado = true;
+        }
+      });
+      if (!algumEncontrado) return { erro: true, motivo: 'Capítulo ou versículo não encontrado' };
+      return { erro: false };
     } catch {
       return { erro: true, motivo: 'Sem ligação à internet' };
     }
   }
 
-  // Varre o texto em busca de "Referências" entre aspas e busca as que
-  // ainda não estão guardadas. Chamado ao Salvar uma nota.
+  // Varre o texto em busca de "Referências" entre aspas (simples ou
+  // intervalo) e busca as que ainda não estão guardadas. Chamado ao
+  // Salvar uma nota.
   async function processarReferenciasDoTexto(texto) {
     if (!texto) return;
     if (!db.versiculosCache) db.versiculosCache = {};
-    const regex = /"([1-3]?\s?[A-Za-zÀ-ÖØ-öø-ÿ]+(?:\s[A-Za-zÀ-ÖØ-öø-ÿ]+)?\s\d{1,3}:\d{1,3})"/g;
+    const regex = /"([1-3]?\s?[A-Za-zÀ-ÖØ-öø-ÿ]+(?:\s[A-Za-zÀ-ÖØ-öø-ÿ]+)?\s\d{1,3}:\d{1,3}(?:-\d{1,3})?)"/g;
     const encontradas = new Set();
     let m;
     while ((m = regex.exec(texto)) !== null) encontradas.add(normalizarRef(m[1]));
 
     for (const ref of encontradas) {
-      const chave = ref.toLowerCase();
-      if (db.versiculosCache[chave] && !db.versiculosCache[chave].erro) continue; // já guardado com sucesso
-      const resultado = await buscarVersiculoAPI(ref);
-      db.versiculosCache[chave] = { refOriginal: ref, ...resultado, buscadoEm: new Date().toISOString() };
+      const parsed = parseReferencia(ref);
+      await buscarVersiculosAPI(parsed);
     }
   }
 
-  // Mostra a janelinha com o texto do versículo ao tocar no destaque
+  // Mostra a janelinha com o texto do(s) versículo(s) ao tocar no destaque
   function mostrarVersiculoPeek(event, ref) {
     if (event) event.stopPropagation();
-    const chave = normalizarRef(ref).toLowerCase();
-    const dados = (db.versiculosCache || {})[chave];
+    const parsed = parseReferencia(ref);
 
     const overlay = document.createElement('div');
     overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.35);z-index:9999;display:flex;align-items:flex-start;justify-content:center;padding-top:18vh';
@@ -4622,11 +4660,27 @@
     card.style.cssText = 'background:var(--surface);border-radius:14px;padding:16px 18px;max-width:320px;width:85%;box-shadow:0 8px 24px rgba(0,0,0,0.25)';
     card.onclick = (e) => e.stopPropagation();
 
-    const corpo = !dados
-      ? `<div style="font-size:13px;color:var(--muted)">Ainda não procurado. Salva a nota outra vez para buscar este versículo.</div>`
-      : dados.erro
-      ? `<div style="font-size:13px;color:#E07B54">Não foi possível encontrar automaticamente (${dados.motivo||'erro'}). Podes escrever o texto manualmente.</div>`
-      : `<div style="font-size:14px;font-style:italic;line-height:1.6">"${dados.texto}"</div>`;
+    let corpo;
+    if (!parsed) {
+      corpo = `<div style="font-size:13px;color:#E07B54">Referência bíblica inválida.</div>`;
+    } else {
+      const partes = [];
+      let faltaAlgum = false;
+      for (let n = parsed.versInicio; n <= parsed.versFim; n++) {
+        const dado = (db.versiculosCache || {})[chaveVersiculo(parsed.abrev, parsed.cap, n)];
+        if (dado) {
+          const numLabel = parsed.versFim > parsed.versInicio ? `<strong>${n}.</strong> ` : '';
+          partes.push(`<div style="font-size:14px;font-style:italic;line-height:1.6;margin-bottom:6px">${numLabel}${dado.texto}</div>`);
+        } else {
+          faltaAlgum = true;
+        }
+      }
+      if (partes.length === 0) {
+        corpo = `<div style="font-size:13px;color:var(--muted)">Ainda não procurado. Salva a nota outra vez para buscar este versículo.</div>`;
+      } else {
+        corpo = partes.join('') + (faltaAlgum ? `<div style="font-size:11px;color:#E07B54;margin-top:4px">Alguns versículos deste intervalo não foram encontrados.</div>` : '');
+      }
+    }
 
     card.innerHTML = `
       <div style="font-size:12px;font-weight:700;color:var(--accent4);margin-bottom:8px">📖 ${ref} <span style="font-weight:400;color:var(--muted)">(ACF)</span></div>
@@ -5731,7 +5785,8 @@
 
   function formatInline(text) {
     // "Referência" → versículo em destaque TOCÁVEL (abre janelinha com o texto buscado)
-    text = text.replace(/"([1-3]?\s?[A-Za-zÀ-ÖØ-öø-ÿ]+(?:\s[A-Za-zÀ-ÖØ-öø-ÿ]+)?\s\d{1,3}:\d{1,3})"/g,
+    // Aceita simples ("João 3:16") ou intervalo ("João 3:16-19")
+    text = text.replace(/"([1-3]?\s?[A-Za-zÀ-ÖØ-öø-ÿ]+(?:\s[A-Za-zÀ-ÖØ-öø-ÿ]+)?\s\d{1,3}:\d{1,3}(?:-\d{1,3})?)"/g,
       (m, ref) => `<span onclick="mostrarVersiculoPeek(event,'${ref.replace(/'/g,"\\'")}')" style="display:inline-block;background:var(--accent4);color:white;border-radius:6px;padding:1px 7px;font-size:11px;font-weight:600;margin:0 2px;cursor:pointer;text-decoration:underline dotted;text-decoration-color:rgba(255,255,255,0.6)">${ref}</span>`);
     // [Referência] → versículo em destaque simples (sem busca automática)
     text = text.replace(/\[([^\]]+)\]/g, '<span style="display:inline-block;background:var(--accent4);color:white;border-radius:6px;padding:1px 7px;font-size:11px;font-weight:600;margin:0 2px">$1</span>');
