@@ -1112,7 +1112,7 @@
         <div class="card" style="display:flex;flex-direction:column;gap:8px">
           <div style="display:flex;justify-content:space-between;align-items:center">
             <span style="font-size:13px;color:var(--muted)">Versão</span>
-            <span style="font-size:13px;font-weight:500">5.5.4</span>
+            <span style="font-size:13px;font-weight:500">5.5.5</span>
           </div>
           <div style="display:flex;justify-content:space-between;align-items:center">
             <span style="font-size:13px;color:var(--muted)">Jovens ativos</span>
@@ -3810,6 +3810,7 @@
     } catch(e) {}
     if (!db.encontros) db.encontros = [];
     if (!db.presencas) db.presencas = [];
+    if (!db.versiculosCache) db.versiculosCache = {};
     // updateStats called after DOMContentLoaded, not here
   }
 
@@ -4179,7 +4180,7 @@
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     const today = new Date().toISOString().slice(0,10).replace(/-/g,'_');
-    a.download = `Chazak_backup_${today}_(v5.5.4).json`;
+    a.download = `Chazak_backup_${today}_(v5.5.5).json`;
     a.click();
   }
 
@@ -4536,6 +4537,105 @@
     'Tiago','1 Pedro','2 Pedro','1 João','2 João','3 João',
     'Judas','Apocalipse'
   ];
+
+  // ══════════════════════════════════════════
+  // BUSCA AUTOMÁTICA DE VERSÍCULOS — API "A Bíblia Digital" (tradução ACF)
+  // Sintaxe: escrever "Livro Cap:Vers" entre aspas no texto de uma nota.
+  // A busca acontece só ao Salvar. Resultado fica guardado para sempre
+  // (funciona offline depois da 1ª vez). Toque no destaque abre uma
+  // janelinha com o texto do versículo.
+  // ══════════════════════════════════════════
+  const BIBLIA_ABREV = {
+    'gênesis':'gn','êxodo':'ex','levítico':'lv','números':'nm','deuteronômio':'dt',
+    'josué':'js','juízes':'jz','rute':'rt','1 samuel':'1sm','2 samuel':'2sm',
+    '1 reis':'1rs','2 reis':'2rs','1 crônicas':'1cr','2 crônicas':'2cr',
+    'esdras':'ed','neemias':'ne','ester':'et','jó':'job','salmos':'sl','provérbios':'pv',
+    'eclesiastes':'ec','cânticos':'ct','isaías':'is','jeremias':'jr','lamentações':'lm',
+    'ezequiel':'ez','daniel':'dn','oséias':'os','joel':'jl','amós':'am',
+    'obadias':'ob','jonas':'jn','miquéias':'mq','naum':'na','habacuque':'hc',
+    'sofonias':'sf','ageu':'ag','zacarias':'zc','malaquias':'ml',
+    'mateus':'mt','marcos':'mc','lucas':'lc','joão':'jo','atos':'at',
+    'romanos':'rm','1 coríntios':'1co','2 coríntios':'2co','gálatas':'gl','efésios':'ef',
+    'filipenses':'fp','colossenses':'cl','1 tessalonicenses':'1ts','2 tessalonicenses':'2ts',
+    '1 timóteo':'1tm','2 timóteo':'2tm','tito':'tt','filemom':'fm','hebreus':'hb',
+    'tiago':'tg','1 pedro':'1pe','2 pedro':'2pe','1 joão':'1jo','2 joão':'2jo','3 joão':'3jo',
+    'judas':'jd','apocalipse':'ap'
+  };
+
+  function normalizarRef(ref) {
+    return ref.trim().replace(/\s+/g, ' ');
+  }
+
+  // Separa "Livro Cap:Vers" em partes, aceitando nomes com acento/maiúsculas variados
+  function parseReferencia(ref) {
+    const m = ref.trim().match(/^(.+?)\s(\d{1,3}):(\d{1,3})$/);
+    if (!m) return null;
+    const nomeLivro = m[1].trim().toLowerCase();
+    const abrev = BIBLIA_ABREV[nomeLivro];
+    if (!abrev) return null;
+    return { abrev, cap: m[2], vers: m[3] };
+  }
+
+  async function buscarVersiculoAPI(ref) {
+    const parsed = parseReferencia(ref);
+    if (!parsed) return { erro: true, motivo: 'Livro não reconhecido' };
+    try {
+      const res = await fetch(`https://www.abibliadigital.com.br/api/verses/acf/${parsed.abrev}/${parsed.cap}/${parsed.vers}`);
+      if (!res.ok) return { erro: true, motivo: 'Não encontrado (verifica capítulo/versículo)' };
+      const data = await res.json();
+      if (!data.text) return { erro: true, motivo: 'Resposta sem texto' };
+      return { erro: false, texto: data.text.trim() };
+    } catch {
+      return { erro: true, motivo: 'Sem ligação à internet' };
+    }
+  }
+
+  // Varre o texto em busca de "Referências" entre aspas e busca as que
+  // ainda não estão guardadas. Chamado ao Salvar uma nota.
+  async function processarReferenciasDoTexto(texto) {
+    if (!texto) return;
+    if (!db.versiculosCache) db.versiculosCache = {};
+    const regex = /"([1-3]?\s?[A-Za-zÀ-ÖØ-öø-ÿ]+(?:\s[A-Za-zÀ-ÖØ-öø-ÿ]+)?\s\d{1,3}:\d{1,3})"/g;
+    const encontradas = new Set();
+    let m;
+    while ((m = regex.exec(texto)) !== null) encontradas.add(normalizarRef(m[1]));
+
+    for (const ref of encontradas) {
+      const chave = ref.toLowerCase();
+      if (db.versiculosCache[chave] && !db.versiculosCache[chave].erro) continue; // já guardado com sucesso
+      const resultado = await buscarVersiculoAPI(ref);
+      db.versiculosCache[chave] = { refOriginal: ref, ...resultado, buscadoEm: new Date().toISOString() };
+    }
+  }
+
+  // Mostra a janelinha com o texto do versículo ao tocar no destaque
+  function mostrarVersiculoPeek(event, ref) {
+    if (event) event.stopPropagation();
+    const chave = normalizarRef(ref).toLowerCase();
+    const dados = (db.versiculosCache || {})[chave];
+
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.35);z-index:9999;display:flex;align-items:flex-start;justify-content:center;padding-top:18vh';
+    overlay.onclick = () => overlay.remove();
+
+    const card = document.createElement('div');
+    card.style.cssText = 'background:var(--surface);border-radius:14px;padding:16px 18px;max-width:320px;width:85%;box-shadow:0 8px 24px rgba(0,0,0,0.25)';
+    card.onclick = (e) => e.stopPropagation();
+
+    const corpo = !dados
+      ? `<div style="font-size:13px;color:var(--muted)">Ainda não procurado. Salva a nota outra vez para buscar este versículo.</div>`
+      : dados.erro
+      ? `<div style="font-size:13px;color:#E07B54">Não foi possível encontrar automaticamente (${dados.motivo||'erro'}). Podes escrever o texto manualmente.</div>`
+      : `<div style="font-size:14px;font-style:italic;line-height:1.6">"${dados.texto}"</div>`;
+
+    card.innerHTML = `
+      <div style="font-size:12px;font-weight:700;color:var(--accent4);margin-bottom:8px">📖 ${ref} <span style="font-weight:400;color:var(--muted)">(ACF)</span></div>
+      ${corpo}
+      <button onclick="this.closest('div[style*=fixed]').remove()" style="margin-top:12px;width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);background:none;color:var(--muted);font-size:12px;cursor:pointer">Fechar</button>
+    `;
+    overlay.appendChild(card);
+    document.body.appendChild(overlay);
+  }
 
   function acPalavra(inp, dropId) {
     const box = document.getElementById(dropId);
@@ -5630,7 +5730,10 @@
   }
 
   function formatInline(text) {
-    // [Referência] → versículo em destaque
+    // "Referência" → versículo em destaque TOCÁVEL (abre janelinha com o texto buscado)
+    text = text.replace(/"([1-3]?\s?[A-Za-zÀ-ÖØ-öø-ÿ]+(?:\s[A-Za-zÀ-ÖØ-öø-ÿ]+)?\s\d{1,3}:\d{1,3})"/g,
+      (m, ref) => `<span onclick="mostrarVersiculoPeek(event,'${ref.replace(/'/g,"\\'")}')" style="display:inline-block;background:var(--accent4);color:white;border-radius:6px;padding:1px 7px;font-size:11px;font-weight:600;margin:0 2px;cursor:pointer;text-decoration:underline dotted;text-decoration-color:rgba(255,255,255,0.6)">${ref}</span>`);
+    // [Referência] → versículo em destaque simples (sem busca automática)
     text = text.replace(/\[([^\]]+)\]/g, '<span style="display:inline-block;background:var(--accent4);color:white;border-radius:6px;padding:1px 7px;font-size:11px;font-weight:600;margin:0 2px">$1</span>');
     // **negrito**
     text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
@@ -5780,11 +5883,17 @@
     openModal('modal-curiosidade');
   }
 
-  function saveCuriosidade() {
+  async function saveCuriosidade() {
     const titulo = document.getElementById('cur-titulo').value.trim();
     const texto = document.getElementById('cur-texto').value.trim();
     if (!titulo && !texto) { alert('Preenche o título ou conteúdo!'); return; }
     if (!db.curiosidades) db.curiosidades = [];
+
+    const btn = document.getElementById('cur-save-btn');
+    if (btn) { btn.disabled = true; btn.textContent = 'A verificar versículos...'; }
+    await processarReferenciasDoTexto(texto);
+    if (btn) { btn.disabled = false; btn.textContent = 'Salvar'; }
+
     const obj = {
       categoria: document.getElementById('cur-categoria').value,
       titulo,
@@ -6451,7 +6560,7 @@
     </div>
     <div class="form-actions">
       <button class="btn-cancel" onclick="closeModal('modal-curiosidade')">Cancelar</button>
-      <button class="btn-save" onclick="saveCuriosidade()">Salvar</button>
+      <button class="btn-save" id="cur-save-btn" onclick="saveCuriosidade()">Salvar</button>
     </div>
   </div>
 </div>
