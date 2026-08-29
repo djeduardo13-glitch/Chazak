@@ -3,7 +3,7 @@
 // IMPORTANTE: sempre que a versão da app mudar, atualizar CACHE_NAME
 // abaixo (mesmo número da versão) para forçar a renovação da cache.
 // ══════════════════════════════════════════
-const CACHE_NAME = 'chazak-cache-v5.5.2';
+const CACHE_NAME = 'chazak-cache-v5.5.4';
 
 // ── INSTALL: tenta pré-cachear a página principal ──
 // (agnóstico ao nome exato do ficheiro — funciona quer se chame

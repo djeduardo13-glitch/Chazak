@@ -1112,7 +1112,7 @@
         <div class="card" style="display:flex;flex-direction:column;gap:8px">
           <div style="display:flex;justify-content:space-between;align-items:center">
             <span style="font-size:13px;color:var(--muted)">Versão</span>
-            <span style="font-size:13px;font-weight:500">5.5.3</span>
+            <span style="font-size:13px;font-weight:500">5.5.4</span>
           </div>
           <div style="display:flex;justify-content:space-between;align-items:center">
             <span style="font-size:13px;color:var(--muted)">Jovens ativos</span>
@@ -4179,7 +4179,7 @@
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     const today = new Date().toISOString().slice(0,10).replace(/-/g,'_');
-    a.download = `Chazak_backup_${today}_(v5.5.3).json`;
+    a.download = `Chazak_backup_${today}_(v5.5.4).json`;
     a.click();
   }
 
@@ -4213,6 +4213,27 @@
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     document.getElementById('sec-' + name).classList.add('active');
     document.getElementById('tab-' + name).classList.add('active');
+  }
+
+  // Sempre que se entra na aba Bíblia (vindo de outra aba), volta ao ponto
+  // de partida: sub-aba Leitura, filtro Todos, sem nenhum livro aberto.
+  function resetBibliaParaLeitura() {
+    if (livroAtualIdx !== null) fecharLivro(); // fecha detalhe se estava aberto
+
+    document.querySelectorAll('.inner-tab').forEach(t => t.classList.remove('active'));
+    const leituraTab = document.querySelector('.inner-tab[onclick*="livros"]');
+    if (leituraTab) leituraTab.classList.add('active');
+    ['livros','curiosidades','favoritos'].forEach(t => {
+      const el = document.getElementById('biblia-' + t);
+      if (el) el.style.display = t === 'livros' ? 'block' : 'none';
+    });
+
+    livrosFiltro = 'todos';
+    document.querySelectorAll('#biblia-livros .filter-chip').forEach(c => c.classList.remove('active'));
+    const todosChip = document.querySelector('#biblia-livros .filter-chip');
+    if (todosChip) todosChip.classList.add('active');
+
+    renderLivros();
   }
 
   function setBibliaTab(el, name) {
@@ -4855,6 +4876,7 @@
     if (name === 'servicos') renderServicos();
     if (name === 'agenda')   { renderCalendar(); renderAgenda(); }
     if (name === 'dados')    { updateStats(); renderGistStatus(); }
+    if (name === 'biblia')   { resetBibliaParaLeitura(); }
     // ── Dynamic header color per tab ──
     const tabColors = {
       mocidade: 'var(--tab-moc)',
@@ -5208,12 +5230,14 @@
 
     let html = `
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">
-        <button onclick="fecharLivroBtn()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted);padding:0">‹</button>
-        <div>
-          <div style="font-size:20px;font-weight:700">${livro.nome}</div>
-          <div style="font-size:11px;color:${color};font-weight:600">${test === 'AT' ? 'Antigo Testamento' : 'Novo Testamento'}</div>
+        <div onclick="fecharLivroBtn()" style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px 8px;margin:-10px 0 -10px -8px;flex:1">
+          <button style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted);padding:0;pointer-events:none">‹</button>
+          <div>
+            <div style="font-size:20px;font-weight:700">${livro.nome}</div>
+            <div style="font-size:11px;color:${color};font-weight:600">${test === 'AT' ? 'Antigo Testamento' : 'Novo Testamento'}</div>
+          </div>
         </div>
-        <button onclick="delLivro(${livroAtualIdx})" style="margin-left:auto;background:none;border:1px solid #fbddd5;border-radius:8px;padding:4px 10px;font-size:12px;cursor:pointer;color:#E07B54">🗑</button>
+        <button onclick="delLivro(${livroAtualIdx})" style="background:none;border:1px solid #fbddd5;border-radius:8px;padding:4px 10px;font-size:12px;cursor:pointer;color:#E07B54">🗑</button>
       </div>
 
       <!-- ── Capítulos ── -->
@@ -5345,10 +5369,13 @@
   }
 
   function fecharLivroBtn() {
-    fecharLivro();
+    // Não fazer pop manual aqui — history.back() já dispara o popstate,
+    // que trata do pop e do fecharLivro() sozinho. Fazer os dois ao
+    // mesmo tempo saltava duas posições no histórico em vez de uma.
     if (_navStack.length > 0 && _navStack[_navStack.length-1]?.type === 'livro') {
-      _navStack.pop();
       history.back();
+    } else {
+      fecharLivro();
     }
   }
 
