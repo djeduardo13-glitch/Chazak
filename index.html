@@ -42,15 +42,6 @@
       --shadow:    0 2px 16px rgba(26,23,20,0.07);
     }
 
-    [data-theme="dark"] {
-      --bg:        #1A1C20;
-      --surface:   #23272E;
-      --border:    #343A44;
-      --text:      #EEEEF2;
-      --muted:     #8E96A0;
-      --shadow:    0 2px 16px rgba(0,0,0,0.35);
-    }
-
     html, body {
       height: 100%;
       overflow: hidden;
@@ -990,6 +981,7 @@
         <div class="inner-tab active" onclick="setBibliaTab(this, 'livros')">📖 Leitura</div>
         <div class="inner-tab" onclick="setBibliaTab(this, 'curiosidades')">🧐 Curiosidades</div>
         <div class="inner-tab" onclick="setBibliaTab(this, 'favoritos')">⭐ Favoritos</div>
+        <div class="inner-tab" onclick="setBibliaTab(this, 'ondeescrito')">📍 Onde está escrito</div>
       </div>
 
       <div id="biblia-leitura" style="display:none">
@@ -1064,6 +1056,19 @@
         <div class="search-wrap" style="margin-bottom:12px"><input type="text" id="fav-search" placeholder="Buscar versículo..." oninput="renderFavoritos()"></div>
         <div id="favoritos-list"></div>
       </div>
+
+      <div id="biblia-ondeescrito" style="display:none">
+        <div style="position:relative;margin-bottom:10px">
+          <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:14px;color:var(--muted)">🔍</span>
+          <input id="oee-busca-input" type="text" placeholder="Buscar tópico..."
+            style="width:100%;padding:9px 12px 9px 34px;border-radius:12px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;box-sizing:border-box"
+            oninput="oeeBusca=this.value;renderOndeEstaEscrito()">
+        </div>
+        <div style="position:relative;padding-right:24px">
+          <div id="oee-list" style="border-radius:var(--radius);border:1px solid var(--border)"></div>
+          <div id="oee-az-nav" style="position:absolute;right:0;top:0;bottom:0;display:flex;flex-direction:column;justify-content:center;gap:1px;padding:8px 0"></div>
+        </div>
+      </div>
     </section>
 
     <!-- ── DADOS ── -->
@@ -1073,21 +1078,26 @@
         <div class="section-title"><span style="color:var(--tab-dad)">Da</span>dos</div>
       </div>
 
-      <!-- ⚙️ PREFERÊNCIAS -->
-      <div class="dados-group-label">⚙️ Preferências</div>
+      <!-- SOBRE O APP -->
       <div class="dados-section">
-        <div class="card" style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px">
-          <div>
-            <div style="font-size:15px;font-weight:500" id="theme-label">🌙 Tema escuro</div>
-            <div style="font-size:12px;color:var(--muted);margin-top:2px">Toca para alternar</div>
+        <div class="dados-title">📱 Sobre o app</div>
+        <div class="card" style="display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:13px;color:var(--muted)">Versão</span>
+            <span style="font-size:13px;font-weight:500">5.6.0</span>
           </div>
-          <div id="theme-toggle" onclick="toggleTheme()" style="width:44px;height:26px;border-radius:100px;background:var(--border);cursor:pointer;position:relative;transition:background 0.2s;flex-shrink:0">
-            <div id="theme-knob" style="position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:100px;background:white;transition:transform 0.2s;box-shadow:0 1px 4px rgba(0,0,0,0.2)"></div>
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:13px;color:var(--muted)">Jovens ativos</span>
+            <span style="font-size:13px;font-weight:500" id="stat-jovens">0</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:13px;color:var(--muted)">Inativos</span>
+            <span style="font-size:13px;font-weight:500" id="stat-inativos">0</span>
           </div>
         </div>
       </div>
 
-      <!-- 💾 DADOS -->
+      <!-- 📍 CONTEÚDO -->
       <div class="dados-group-label">📍 Conteúdo</div>
       <div class="dados-section">
         <div class="card" style="padding:0">
@@ -1102,37 +1112,6 @@
               <button onclick="addLuogo()" style="background:var(--accent);color:white;border:none;border-radius:var(--radius);padding:0 16px;font-size:13px;cursor:pointer;white-space:nowrap">+ Add</button>
             </div>
             <div id="luoghi-list" style="display:flex;flex-direction:column;gap:6px;max-height:300px;overflow-y:auto"></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- SOBRE O APP -->
-      <div class="dados-section">
-        <div class="dados-title">📱 Sobre o app</div>
-        <div class="card" style="display:flex;flex-direction:column;gap:8px">
-          <div style="display:flex;justify-content:space-between;align-items:center">
-            <span style="font-size:13px;color:var(--muted)">Versão</span>
-            <span style="font-size:13px;font-weight:500">5.5.6</span>
-          </div>
-          <div style="display:flex;justify-content:space-between;align-items:center">
-            <span style="font-size:13px;color:var(--muted)">Jovens ativos</span>
-            <span style="font-size:13px;font-weight:500" id="stat-jovens">0</span>
-          </div>
-          <div style="display:flex;justify-content:space-between;align-items:center">
-            <span style="font-size:13px;color:var(--muted)">Inativos</span>
-            <span style="font-size:13px;font-weight:500" id="stat-inativos">0</span>
-          </div>
-          <div style="display:flex;justify-content:space-between;align-items:center">
-            <span style="font-size:13px;color:var(--muted)">Viagens</span>
-            <span style="font-size:13px;font-weight:500" id="stat-viagens">0</span>
-          </div>
-          <div style="display:flex;justify-content:space-between;align-items:center">
-            <span style="font-size:13px;color:var(--muted)">Localidades</span>
-            <span style="font-size:13px;font-weight:500" id="stat-luoghi">0</span>
-          </div>
-          <div style="display:flex;justify-content:space-between;align-items:center">
-            <span style="font-size:13px;color:var(--muted)">Ideias</span>
-            <span style="font-size:13px;font-weight:500" id="stat-ideias">0</span>
           </div>
         </div>
       </div>
@@ -1507,9 +1486,15 @@
     <div class="form-field">
       <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px;font-weight:500">
         <input type="checkbox" id="ej-excluir-ranking" style="width:18px;height:18px;accent-color:var(--accent);cursor:pointer">
-        <span>Excluir do ranking de presença</span>
+        <span>Não contar na estatística de presença</span>
       </label>
       <div style="font-size:11px;color:var(--muted);margin-top:4px;margin-left:28px">Continua a poder ser marcado nas sessões, mas não aparece no Ranking (ex: trabalha aos domingos)</div>
+    </div>
+    <div class="form-field">
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px;font-weight:500">
+        <input type="checkbox" id="ej-auxiliar" style="width:18px;height:18px;accent-color:var(--accent);cursor:pointer">
+        <span>🖋️ Auxiliar</span>
+      </label>
     </div>
     <div class="form-actions"><button class="btn-cancel" onclick="closeModal('modal-edit-jovem')">Cancelar</button><button class="btn-save" onclick="saveEditJovem()">Salvar</button></div>
   </div>
@@ -2425,7 +2410,7 @@
       card.innerHTML = `
         <div class="pc-top" style="margin-bottom:0">
           <div>
-            <div class="pc-name">${jovem.name}${anivBadge}</div>
+            <div class="pc-name">${jovem.auxiliar ? '🖋️ ' : ''}${jovem.name}${anivBadge}</div>
             ${anivStr ? `<div style="font-size:11px;color:var(--muted);margin-top:2px">🎂 ${anivDisplay}</div>` : ''}
           </div>
           <div class="pc-status">
@@ -2657,6 +2642,7 @@
     document.getElementById('ej-obs').value = j.obs || '';
     document.getElementById('ej-ativo').checked = j.ativo !== false;
     document.getElementById('ej-excluir-ranking').checked = !!j.excluirRankingPresenca;
+    document.getElementById('ej-auxiliar').checked = !!j.auxiliar;
     // Load genero
     _ejGenero = j.genero || (
       ['Jovem Moço','Criança Menino','Menino menor de 6','Menor de 5 anos'].includes(j.cat) ||
@@ -2676,6 +2662,7 @@
     j.obs  = document.getElementById('ej-obs').value;
     j.ativo = document.getElementById('ej-ativo').checked;
     j.excluirRankingPresenca = document.getElementById('ej-excluir-ranking').checked;
+    j.auxiliar = document.getElementById('ej-auxiliar').checked;
     // Se o nome mudou, sincronizar chaves nos registos de presença histórica
     if (oldName !== j.name && (db.presencas||[]).length) {
       db.presencas.forEach(s => {
@@ -3249,9 +3236,15 @@
       const livrosTab = document.getElementById('biblia-livros');
       const curTab = document.getElementById('biblia-curiosidades');
       const favTab = document.getElementById('biblia-favoritos');
+      const oeeTab = document.getElementById('biblia-ondeescrito');
       if (livrosTab && livrosTab.style.display !== 'none') { openNovoLivro(); return; }
       if (curTab && curTab.style.display !== 'none') { openNovaCuriosidade(); return; }
       if (favTab && favTab.style.display !== 'none') { openNovoFavorito(); return; }
+      if (oeeTab && oeeTab.style.display !== 'none') {
+        openNovaCuriosidade();
+        document.getElementById('cur-categoria').value = 'Onde está escrito';
+        return;
+      }
       return;
     }
     if (activeSection === 'sec-biblia') {
@@ -3826,32 +3819,6 @@
     const el = id => document.getElementById(id);
     if (el('stat-jovens'))   el('stat-jovens').textContent   = active;
     if (el('stat-inativos')) el('stat-inativos').textContent = alumni;
-    if (el('stat-viagens'))  el('stat-viagens').textContent  = (db.viagens||[]).length;
-    if (el('stat-luoghi'))   el('stat-luoghi').textContent   = (db.luoghi||[]).length;
-    if (el('stat-ideias'))   el('stat-ideias').textContent   = (db.ideias||[]).length;
-  }
-
-  // ── THEME ──
-  function applyTheme(dark) {
-    document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
-    const knob = document.getElementById('theme-knob');
-    const toggle = document.getElementById('theme-toggle');
-    const label = document.getElementById('theme-label');
-    if (knob) knob.style.transform = dark ? 'translateX(18px)' : 'translateX(0)';
-    if (toggle) toggle.style.background = dark ? 'var(--accent)' : 'var(--border)';
-    if (label) label.textContent = dark ? '☀️ Tema claro' : '🌙 Tema escuro';
-  }
-
-  function toggleTheme() {
-    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    const next = !isDark;
-    localStorage.setItem('cooperador_theme', next ? 'dark' : 'light');
-    applyTheme(next);
-  }
-
-  function initTheme() {
-    const saved = localStorage.getItem('cooperador_theme') || 'light';
-    applyTheme(saved === 'dark');
   }
 
   // ── PERFIL PESSOAL ──
@@ -4180,7 +4147,7 @@
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     const today = new Date().toISOString().slice(0,10).replace(/-/g,'_');
-    a.download = `Chazak_backup_${today}_(v5.5.6).json`;
+    a.download = `Chazak_backup_${today}_(v5.6.0).json`;
     a.click();
   }
 
@@ -4240,12 +4207,13 @@
   function setBibliaTab(el, name) {
     document.querySelectorAll('.inner-tab').forEach(t => t.classList.remove('active'));
     el.classList.add('active');
-    ['livros','curiosidades','favoritos'].forEach(t => {
+    ['livros','curiosidades','favoritos','ondeescrito'].forEach(t => {
       document.getElementById('biblia-' + t).style.display = t === name ? 'block' : 'none';
     });
     if (name === 'livros') renderLivros();
     if (name === 'curiosidades') renderCuriosidades();
     if (name === 'favoritos') renderFavoritos();
+    if (name === 'ondeescrito') renderOndeEstaEscrito();
   }
 
   // ── PLANNER ──
@@ -5750,7 +5718,6 @@
 
   const CUR_CATEGORIAS = [
     { val:'Significado',       icon:'📖' },
-    { val:'Onde está escrito', icon:'📍' },
     { val:'Curiosidades',      icon:'🧐' },
     { val:'Aprofundamento',    icon:'🔬' },
     { val:'Biografia',         icon:'👤' },
@@ -5916,6 +5883,72 @@
   }
 
   function setCurTagFilter(t) { curTagFilter = t; renderCuriosidades(); }
+
+  // ── ONDE ESTÁ ESCRITO — índice A-Z (reutiliza openVerNota/openNovaCuriosidade) ──
+  let oeeBusca = '';
+
+  function renderOndeEstaEscrito() {
+    const container = document.getElementById('oee-list');
+    const azNav = document.getElementById('oee-az-nav');
+    if (!container || !azNav) return;
+    const color = '#8B4A2E'; // mesma cor já usada para "Onde está escrito" em CAT_COLOR
+
+    let list = (db.curiosidades || []).filter(c => c.categoria === 'Onde está escrito');
+    if (oeeBusca.trim()) {
+      const q = oeeBusca.trim().toLowerCase();
+      list = list.filter(c => (c.titulo||'').toLowerCase().includes(q));
+    }
+    list.sort((a,b) => (a.titulo||'').localeCompare(b.titulo||'', 'pt'));
+
+    if (!list.length) {
+      container.style.border = 'none';
+      container.innerHTML = `<div class="empty-state" style="padding:30px 0">
+        <div class="empty-icon">📍</div>
+        <div class="empty-title">${oeeBusca ? 'Nenhum resultado' : 'Nenhum tópico ainda'}</div>
+        <div class="empty-desc">${oeeBusca ? 'Tenta outra busca.' : 'Toca no + para adicionar.'}</div>
+      </div>`;
+      azNav.innerHTML = '';
+      return;
+    }
+    container.style.border = '1px solid var(--border)';
+
+    // Agrupar por primeira letra do título
+    const grupos = {};
+    list.forEach(c => {
+      const letra = (c.titulo||'?').trim().charAt(0).toUpperCase();
+      if (!grupos[letra]) grupos[letra] = [];
+      grupos[letra].push(c);
+    });
+    const letras = Object.keys(grupos).sort((a,b) => a.localeCompare(b,'pt'));
+
+    container.innerHTML = '';
+    letras.forEach(letra => {
+      const header = document.createElement('div');
+      header.id = `oee-letra-${letra}`;
+      header.style.cssText = 'position:sticky;top:0;background:var(--bg);padding:6px 14px;font-size:12px;font-weight:600;color:var(--muted);border-bottom:1px solid var(--border);z-index:1';
+      header.textContent = letra;
+      container.appendChild(header);
+
+      grupos[letra].forEach(c => {
+        const realIdx = db.curiosidades.indexOf(c);
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border-top:1px solid var(--border);cursor:pointer';
+        row.innerHTML = `
+          <span style="font-size:14px;color:var(--text)">${c.titulo||'Sem título'}</span>
+          <span style="font-size:16px;color:var(--muted);flex-shrink:0;margin-left:8px">›</span>`;
+        row.onclick = () => openVerNota(realIdx);
+        container.appendChild(row);
+      });
+    });
+
+    // Barra rápida A-Z lateral
+    const ALFABETO = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+    azNav.innerHTML = ALFABETO.map(letra => {
+      const temConteudo = letras.includes(letra);
+      return `<span onclick="${temConteudo ? `document.getElementById('oee-letra-${letra}').scrollIntoView({block:'start'})` : ''}"
+        style="font-size:9px;text-align:center;width:14px;cursor:${temConteudo?'pointer':'default'};font-weight:${temConteudo?'700':'400'};color:${temConteudo?color:'var(--muted)'};opacity:${temConteudo?'1':'0.4'}">${letra}</span>`;
+    }).join('');
+  }
 
   function openNovaCuriosidade() {
     curEditIdx = null;
@@ -6427,7 +6460,6 @@
     }
 
     loadDB();
-    initTheme();
     initLuoghi();
     initJovens();
     initEventos();
