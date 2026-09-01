@@ -70,4 +70,4 @@ Ficheiro único HTML — sem dependências, sem servidor, funciona offline.
 
 ## Versão
 
-**v5.3.0** — Março 2026
+**v5.6.0** — Setembro 2026
