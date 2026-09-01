@@ -841,11 +841,11 @@
 
       <!-- Sub-tabs -->
       <div class="moc-inner-tabs">
-        <div class="moc-inner-tab active" onclick="setMocTab(this,'tracker')">👥 Tracker</div>
-        <div class="moc-inner-tab" onclick="setMocTab(this,'presenca')">🙋 Presença</div>
-        <div class="moc-inner-tab" onclick="setMocTab(this,'viagens')">✈️ Viagens</div>
-        <div class="moc-inner-tab" onclick="setMocTab(this,'encontros')">🎉 Encontros</div>
-        <div class="moc-inner-tab" onclick="setMocTab(this,'ideias')">💡 Ideias</div>
+        <div class="moc-inner-tab active" onclick="setMocTab(this,'tracker')" title="Tracker">👥</div>
+        <div class="moc-inner-tab" onclick="setMocTab(this,'presenca')" title="Presença">🙋</div>
+        <div class="moc-inner-tab" onclick="setMocTab(this,'viagens')" title="Viagens">✈️</div>
+        <div class="moc-inner-tab" onclick="setMocTab(this,'encontros')" title="Encontros">🎉</div>
+        <div class="moc-inner-tab" onclick="setMocTab(this,'ideias')" title="Ideias">💡</div>
       </div>
 
       <!-- ── TRACKER ── -->
@@ -860,12 +860,12 @@
 
         <div class="filter-row" style="margin-bottom:10px">
             <div class="filter-chip active" onclick="setMocFilter(this,'todos')">Todos</div>
-            <div class="filter-chip" onclick="setMocFilter(this,'Jovem Moça')">Jovem Moça</div>
-            <div class="filter-chip" onclick="setMocFilter(this,'Jovem Moço')">Jovem Moço</div>
-            <div class="filter-chip" onclick="setMocFilter(this,'Criança Menina')">Criança ♀</div>
-            <div class="filter-chip" onclick="setMocFilter(this,'Criança Menino')">Criança ♂</div>
-            <div class="filter-chip" onclick="setMocFilter(this,'Menina menor de 6')">‹6 ♀</div>
-            <div class="filter-chip" onclick="setMocFilter(this,'Menino menor de 6')">‹6 ♂</div>
+            <div class="filter-chip" onclick="setMocFilter(this,'Jovem Moça')">Moças +12</div>
+            <div class="filter-chip" onclick="setMocFilter(this,'Criança Menina')">Meninas +6</div>
+            <div class="filter-chip" onclick="setMocFilter(this,'Menina menor de 6')">Meninas -6</div>
+            <div class="filter-chip" onclick="setMocFilter(this,'Jovem Moço')">Moços +12</div>
+            <div class="filter-chip" onclick="setMocFilter(this,'Criança Menino')">Meninos +6</div>
+            <div class="filter-chip" onclick="setMocFilter(this,'Menino menor de 6')">Meninos -6</div>
             <div class="filter-chip" onclick="setMocFilter(this,'atencao')">⚠️</div>
           </div>
 
@@ -994,10 +994,10 @@
       </div>
 
       <div class="inner-tabs">
-        <div class="inner-tab active" onclick="setBibliaTab(this, 'livros')">📖 Leitura</div>
-        <div class="inner-tab" onclick="setBibliaTab(this, 'curiosidades')">🧐 Curiosidades</div>
-        <div class="inner-tab" onclick="setBibliaTab(this, 'favoritos')">⭐ Favoritos</div>
-        <div class="inner-tab" onclick="setBibliaTab(this, 'ondeescrito')">📍 Onde está escrito</div>
+        <div class="inner-tab active" onclick="setBibliaTab(this, 'livros')" title="Leitura">📖</div>
+        <div class="inner-tab" onclick="setBibliaTab(this, 'curiosidades')" title="Curiosidades">🧐</div>
+        <div class="inner-tab" onclick="setBibliaTab(this, 'favoritos')" title="Favoritos">⭐</div>
+        <div class="inner-tab" onclick="setBibliaTab(this, 'ondeescrito')" title="Onde está escrito">📍</div>
       </div>
 
       <div id="biblia-leitura" style="display:none">
