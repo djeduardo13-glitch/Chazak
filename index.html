@@ -1460,6 +1460,17 @@
       <button class="pc-btn" id="pb-viagem" onclick="openInterModal(perfilIdx,'viagem')">✈️ Viagem<span id="pb-viagem-date">—</span></button>
       <button class="pc-btn" id="pb-outro" onclick="openInterModal(perfilIdx,'outro')">📝 Outro<span id="pb-outro-date">—</span></button>
     </div>
+    <div style="margin-bottom:20px">
+      <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:10px">👨‍👩‍👧‍👦 Irmãos</div>
+      <div id="perfil-irmaos-list" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px"></div>
+      <div style="position:relative">
+        <input class="form-input" type="text" id="perfil-irmao-search" placeholder="Buscar jovem..." autocomplete="off"
+          oninput="acIrmao(this.value)" onfocus="acIrmao(this.value)"
+          onblur="setTimeout(()=>{const d=document.getElementById('ac-irmao');if(d)d.style.display='none'},200)"
+          style="font-size:13px">
+        <div id="ac-irmao" style="display:none;position:absolute;z-index:200;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);width:100%;max-height:180px;overflow-y:auto;box-shadow:0 4px 16px rgba(0,0,0,0.1)"></div>
+      </div>
+    </div>
     <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:10px">Histórico completo</div>
     <div id="perfil-hist"></div>
     <div class="form-actions" style="margin-top:16px">
@@ -1879,9 +1890,29 @@
     hideAc(ctx === 'cur' ? 'ac-cur-tag' : 'ac-ideia-tag');
   }
 
+  // ══════════════════════════════════════════
+  // ID ÚNICO DO JOVEM (A3 — Etapa 1)
+  // Usado internamente para ligações estáveis entre jovens (ex: irmãos)
+  // que não se partem se o nome for editado depois. Nunca aparece no ecrã.
+  // ══════════════════════════════════════════
+  function gerarIdJovem() {
+    let id;
+    do {
+      id = 'j_' + Math.random().toString(36).slice(2, 8);
+    } while ((db.jovens||[]).some(j => j.id === id));
+    return id;
+  }
+
+  function getJovemById(id) {
+    return (db.jovens||[]).find(j => j.id === id) || null;
+  }
+
   function initJovens() {
     if (!db.jovens || db.jovens.length === 0) {
-      db.jovens = DEFAULT_JOVENS.map(j => ({...j, interactions:[]}));
+      db.jovens = [];
+      DEFAULT_JOVENS.forEach(j => {
+        db.jovens.push({...j, interactions:[], id: gerarIdJovem(), irmaosIds: []});
+      });
       saveDB();
     } else {
       let changed = false;
@@ -1896,6 +1927,9 @@
           j.genero = masc.includes(j.cat) ? 'M' : 'F';
           changed = true;
         }
+        // A3 — Etapa 1: dar ID único a jovens que ainda não têm (retrocompatibilidade)
+        if (!j.id) { j.id = gerarIdJovem(); changed = true; }
+        if (!j.irmaosIds) { j.irmaosIds = []; changed = true; }
       });
       if (changed) saveDB();
     }
@@ -2606,7 +2640,71 @@
 
     // Full history
     renderPerfilHist(idx);
+    renderPerfilIrmaos(idx);
     openModal('modal-perfil');
+  }
+
+  // ── IRMÃOS (ligação por ID — sobrevive a renomeações) ──
+  function renderPerfilIrmaos(idx) {
+    const j = db.jovens[idx];
+    if (!j.irmaosIds) j.irmaosIds = [];
+    const list = document.getElementById('perfil-irmaos-list');
+    if (!list) return;
+    const irmaos = j.irmaosIds.map(id => getJovemById(id)).filter(Boolean);
+    if (!irmaos.length) {
+      list.innerHTML = `<span style="font-size:12px;color:var(--muted)">Nenhum irmão ligado ainda.</span>`;
+    } else {
+      list.innerHTML = irmaos.map(irmao => `
+        <span style="display:inline-flex;align-items:center;gap:6px;background:var(--bg);border:1px solid var(--border);border-radius:100px;padding:5px 6px 5px 12px;font-size:13px">
+          <span onclick="openPerfil(db.jovens.findIndex(x=>x.id==='${irmao.id}'))" style="cursor:pointer;font-weight:500">${irmao.name}</span>
+          <span onclick="removeIrmao('${irmao.id}')" style="cursor:pointer;color:var(--muted);font-size:15px;line-height:1;padding:2px 4px">×</span>
+        </span>`).join('');
+    }
+    const searchInp = document.getElementById('perfil-irmao-search');
+    if (searchInp) searchInp.value = '';
+    const drop = document.getElementById('ac-irmao');
+    if (drop) drop.style.display = 'none';
+  }
+
+  function acIrmao(q) {
+    const box = document.getElementById('ac-irmao');
+    if (!box || perfilIdx === null) return;
+    const j = db.jovens[perfilIdx];
+    const jaLigados = j.irmaosIds || [];
+    const qq = (q || '').trim().toLowerCase();
+    const matches = db.jovens
+      .filter(x => x.id !== j.id && !jaLigados.includes(x.id) && x.name.toLowerCase().includes(qq))
+      .slice(0, 8);
+    if (!matches.length) { box.style.display = 'none'; return; }
+    box.innerHTML = matches.map(x => `
+      <div class="ac-item" onmousedown="addIrmao('${x.id}')" style="padding:10px 12px;border-bottom:1px solid var(--border)">
+        <div style="font-size:14px;font-weight:500">${x.name}</div>
+        <div style="font-size:11px;color:var(--muted)">${x.cat||''}</div>
+      </div>`).join('');
+    box.style.display = 'block';
+  }
+
+  function addIrmao(idAlvo) {
+    if (perfilIdx === null) return;
+    const j = db.jovens[perfilIdx];
+    const alvo = getJovemById(idAlvo);
+    if (!alvo) return;
+    if (!j.irmaosIds) j.irmaosIds = [];
+    if (!alvo.irmaosIds) alvo.irmaosIds = [];
+    if (!j.irmaosIds.includes(alvo.id)) j.irmaosIds.push(alvo.id);
+    if (!alvo.irmaosIds.includes(j.id)) alvo.irmaosIds.push(j.id);
+    saveDB();
+    renderPerfilIrmaos(perfilIdx);
+  }
+
+  function removeIrmao(idAlvo) {
+    if (perfilIdx === null) return;
+    const j = db.jovens[perfilIdx];
+    const alvo = getJovemById(idAlvo);
+    j.irmaosIds = (j.irmaosIds||[]).filter(id => id !== idAlvo);
+    if (alvo) alvo.irmaosIds = (alvo.irmaosIds||[]).filter(id => id !== j.id);
+    saveDB();
+    renderPerfilIrmaos(perfilIdx);
   }
 
   const HIST_PAGE_SIZE = 4;
@@ -2701,7 +2799,9 @@
 
   async function delJovemFromPerfil() {
     if (!(await chzConfirm(`Remover ${db.jovens[perfilIdx].name}?`, 'Remover'))) return;
+    const idRemovido = db.jovens[perfilIdx].id;
     db.jovens.splice(perfilIdx, 1);
+    if (idRemovido) db.jovens.forEach(j => { if (j.irmaosIds) j.irmaosIds = j.irmaosIds.filter(id => id !== idRemovido); });
     saveDB();
     closeModal('modal-perfil');
     renderTracker();
@@ -3583,6 +3683,7 @@
     if (!_njGenero) { chzAlert('Seleciona o gênero!'); return; }
     const aniv = document.getElementById('nj-aniv').value.trim();
     db.jovens.push({
+      id: gerarIdJovem(),
       name: nome,
       genero: _njGenero,
       cat: getGrupoAuto({ genero: _njGenero, aniv }),
@@ -3590,6 +3691,7 @@
       tel: document.getElementById('nj-tel').value,
       obs: document.getElementById('nj-obs').value,
       interactions: [],
+      irmaosIds: [],
       ativo: document.getElementById('nj-ativo').checked
     });
     document.getElementById('nj-nome').value = '';
@@ -3670,7 +3772,13 @@
   }
 
   async function delJovem(idx) {
-    if (await chzConfirm(`Remover ${db.jovens[idx].name}?`, 'Remover')) { db.jovens.splice(idx,1); saveDB(); renderTracker(); }
+    if (await chzConfirm(`Remover ${db.jovens[idx].name}?`, 'Remover')) {
+      const idRemovido = db.jovens[idx].id;
+      db.jovens.splice(idx,1);
+      if (idRemovido) db.jovens.forEach(j => { if (j.irmaosIds) j.irmaosIds = j.irmaosIds.filter(id => id !== idRemovido); });
+      saveDB();
+      renderTracker();
+    }
   }
 
 
@@ -4236,11 +4344,13 @@
         try {
           const imported = JSON.parse(ev.target.result);
           db = { ...db, ...imported };
+          initJovens(); // garante ID único mesmo em jovens vindos de um backup mais antigo
           saveDB();
           // Count total records
           const count = Object.values(imported).reduce((n, v) => n + (Array.isArray(v) ? v.length : 0), 0);
           logImport(file.name, count);
           chzAlert('✅ Dados importados com sucesso!');
+          renderTracker();
         } catch { chzAlert('❌ Arquivo inválido.'); }
       };
       reader.readAsText(file);
