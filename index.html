@@ -40,7 +40,23 @@
       --header-h:  76px;
       --radius:    14px;
       --shadow:    0 2px 16px rgba(26,23,20,0.07);
+      --hl-verde:  rgba(61,107,79,0.20);
+      --hl-azul:   rgba(58,110,168,0.20);
+      --hl-rosa:   rgba(199,80,141,0.20);
     }
+
+    mark.chz-hl-verde,
+    mark.chz-hl-azul,
+    mark.chz-hl-rosa {
+      padding: 1px 3px;
+      border-radius: 4px;
+      color: inherit;
+      -webkit-box-decoration-break: clone;
+      box-decoration-break: clone;
+    }
+    mark.chz-hl-verde { background: var(--hl-verde); }
+    mark.chz-hl-azul  { background: var(--hl-azul); }
+    mark.chz-hl-rosa  { background: var(--hl-rosa); }
 
     html, body {
       height: 100%;
@@ -1598,9 +1614,67 @@
   </div>
 </div>
 
+<!-- MODAL: DIÁLOGO DO SISTEMA (substitui os alert/confirm nativos do navegador — D10) -->
+<div class="modal-overlay" id="modal-chz-dialog">
+  <div class="modal-sheet" style="padding-bottom:28px">
+    <div class="modal-handle"></div>
+    <div id="chz-dialog-message" style="font-size:14px;line-height:1.6;white-space:pre-wrap;margin-bottom:20px"></div>
+    <div class="form-actions" id="chz-dialog-actions"></div>
+  </div>
+</div>
+
 <script>
   let mocFilter = 'todos';
   let interCtx = null; // { jovemIdx, tipo }
+
+  // ══════════════════════════════════════════
+  // DIÁLOGOS PERSONALIZADOS — substituem os alert/confirm nativos do navegador (D10)
+  // Reutilizam o mesmo estilo visual dos outros modais da app.
+  // ══════════════════════════════════════════
+  function chzAlert(message) {
+    return new Promise(resolve => {
+      const msgEl = document.getElementById('chz-dialog-message');
+      const actions = document.getElementById('chz-dialog-actions');
+      if (!msgEl || !actions) { resolve(true); return; }
+      msgEl.textContent = message;
+      actions.innerHTML = '';
+      const btnOk = document.createElement('button');
+      btnOk.className = 'btn-save';
+      btnOk.style.flex = '1';
+      btnOk.textContent = 'OK';
+      btnOk.onclick = () => { closeModal('modal-chz-dialog'); resolve(true); };
+      actions.appendChild(btnOk);
+      openModal('modal-chz-dialog');
+      setTimeout(() => btnOk.focus(), 50);
+    });
+  }
+
+  function chzConfirm(message, okLabel) {
+    return new Promise(resolve => {
+      const msgEl = document.getElementById('chz-dialog-message');
+      const actions = document.getElementById('chz-dialog-actions');
+      if (!msgEl || !actions) { resolve(window.confirm(message)); return; }
+      msgEl.textContent = message;
+      actions.innerHTML = '';
+      const btnCancel = document.createElement('button');
+      btnCancel.className = 'btn-cancel';
+      btnCancel.textContent = 'Cancelar';
+      btnCancel.onclick = () => { closeModal('modal-chz-dialog'); resolve(false); };
+      const btnOk = document.createElement('button');
+      btnOk.className = 'btn-save';
+      btnOk.style.background = '#E07B54';
+      btnOk.textContent = okLabel || 'Confirmar';
+      btnOk.onclick = () => { closeModal('modal-chz-dialog'); resolve(true); };
+      actions.appendChild(btnCancel);
+      actions.appendChild(btnOk);
+      openModal('modal-chz-dialog');
+    });
+  }
+
+  // Versão para usar dentro de onclick="..." inline (não pode usar await diretamente)
+  async function chzConfirmDelete(message, onYes, okLabel) {
+    if (await chzConfirm(message, okLabel || 'Remover')) onYes();
+  }
 
   // Pre-load known youth with birthdays from aniversarios_atualizado.docx
   const DEFAULT_JOVENS = [
@@ -2031,7 +2105,7 @@
   function aplicarConflito(nomeAntigo, selId) {
     const select = document.getElementById(selId);
     const alvo = select ? select.value : '';
-    if (!alvo) { alert('Seleciona um jovem primeiro!'); return; }
+    if (!alvo) { chzAlert('Seleciona um jovem primeiro!'); return; }
     const statusAntigo = sessaoStatusMap[nomeAntigo];
     const PRIORIDADE = { presente: 3, justificada: 2, ausente: 1 };
     // Se o alvo já tem entrada (colisão), mantém o status de maior prioridade
@@ -2045,8 +2119,8 @@
     renderSessaoJovensList();
   }
 
-  function ignorarConflito(nome) {
-    if (!confirm(`Descartar permanentemente o registo antigo "${nome}"?`)) return;
+  async function ignorarConflito(nome) {
+    if (!(await chzConfirm(`Descartar permanentemente o registo antigo "${nome}"?`, 'Descartar'))) return;
     delete sessaoStatusMap[nome];
     renderSessaoJovensList();
   }
@@ -2058,7 +2132,7 @@
 
   function saveSessaoPresenca() {
     const data = document.getElementById('sessao-data').value;
-    if (!data) { alert('Selecione uma data!'); return; }
+    if (!data) { chzAlert('Selecione uma data!'); return; }
     if (sessaoEditId !== null) {
       const sessao = db.presencas.find(s => s.id === sessaoEditId);
       if (sessao) { sessao.data = data; sessao.registros = { ...sessaoStatusMap }; }
@@ -2070,9 +2144,9 @@
     renderPresenca();
   }
 
-  function delSessaoPresenca() {
+  async function delSessaoPresenca() {
     if (sessaoEditId === null) return;
-    if (!confirm('Remover esta sessão de presença permanentemente?')) return;
+    if (!(await chzConfirm('Remover esta sessão de presença permanentemente?', 'Remover'))) return;
     db.presencas = db.presencas.filter(s => s.id !== sessaoEditId);
     saveDB();
     closeModal('modal-sessao-presenca');
@@ -2611,12 +2685,12 @@
     openModal('modal-perfil');
   }
 
-  function delInterFromPerfil(idx, interIdx) {
+  async function delInterFromPerfil(idx, interIdx) {
     const h = db.jovens[idx].interactions[interIdx];
     const tipoLabels = { presente:'Presente', conversa:'Conversa', viagem:'Viagem', outro:'Outro', Outro:'Outro' };
     const label = tipoLabels[h.tipo] || h.tipo;
     const desc = h.note || h.desc || '';
-    if (!confirm(`Remover interação?\n${label}${desc ? ' · ' + desc : ''}\n${fmtDate(h.date)}`)) return;
+    if (!(await chzConfirm(`Remover interação?\n${label}${desc ? ' · ' + desc : ''}\n${fmtDate(h.date)}`, 'Remover'))) return;
     db.jovens[idx].interactions.splice(interIdx, 1);
     saveDB();
     renderPerfilHist(idx);
@@ -2625,8 +2699,8 @@
     openModal('modal-perfil');
   }
 
-  function delJovemFromPerfil() {
-    if (!confirm(`Remover ${db.jovens[perfilIdx].name}?`)) return;
+  async function delJovemFromPerfil() {
+    if (!(await chzConfirm(`Remover ${db.jovens[perfilIdx].name}?`, 'Remover'))) return;
     db.jovens.splice(perfilIdx, 1);
     saveDB();
     closeModal('modal-perfil');
@@ -3109,9 +3183,9 @@
     const search = document.getElementById('mot-search').value.trim();
     const outro = document.getElementById('mot-outro').value.trim();
     const motorista = search || outro;
-    if (!motorista) { alert('Indica o nome do motorista!'); return; }
+    if (!motorista) { chzAlert('Indica o nome do motorista!'); return; }
     const lugares = parseInt(document.getElementById('mot-lugares').value) || 5;
-    if (lugares < 2) { alert('Mínimo 2 lugares.'); return; }
+    if (lugares < 2) { chzAlert('Mínimo 2 lugares.'); return; }
     if (!db.viagens[currentViagemIdx].carros) db.viagens[currentViagemIdx].carros = [];
     db.viagens[currentViagemIdx].carros.push({id:'carro_'+Date.now(), motorista, lugares, passageiros:[]});
     saveDB(); renderCarros();
@@ -3173,27 +3247,27 @@
     renderTracker();
     const nomesArr = [...nomes];
     if (registrados === 0 && jaRegistrados === 0) {
-      alert('Nenhum nome corresponde a um jovem do database.\n\nNomes detetados nos carros:\n' + (nomesArr.length ? nomesArr.join('\n') : '(nenhum)') + '\n\nVerifica se os nomes coincidem exatamente com os da lista de jovens.');
+      chzAlert('Nenhum nome corresponde a um jovem do database.\n\nNomes detetados nos carros:\n' + (nomesArr.length ? nomesArr.join('\n') : '(nenhum)') + '\n\nVerifica se os nomes coincidem exatamente com os da lista de jovens.');
     } else if (registrados === 0 && jaRegistrados > 0) {
-      alert(`ℹ️ Todos os jovens já tinham esta viagem registrada no Tracker.`);
+      chzAlert(`ℹ️ Todos os jovens já tinham esta viagem registrada no Tracker.`);
     } else {
       const extra = jaRegistrados > 0 ? `\n(${jaRegistrados} já estavam registrados — ignorados)` : '';
-      alert(`✅ Registrado no Tracker de ${registrados} ${registrados>1?'jovens':'jovem'}!${extra}`);
+      chzAlert(`✅ Registrado no Tracker de ${registrados} ${registrados>1?'jovens':'jovem'}!${extra}`);
     }
   }
 
-  function delCarro(ci) {
+  async function delCarro(ci) {
     if (currentViagemIdx === null) return;
-    if (confirm('Remover este carro?')) {
+    if (await chzConfirm('Remover este carro?', 'Remover')) {
       db.viagens[currentViagemIdx].carros.splice(ci, 1);
       saveDB(); renderCarros();
     }
   }
 
-  function delViagemFromDetail() {
+  async function delViagemFromDetail() {
     if (currentViagemIdx === null) return;
     const v = db.viagens[currentViagemIdx];
-    if (confirm(`Remover viagem para ${v.destino}?`)) {
+    if (await chzConfirm(`Remover viagem para ${v.destino}?`, 'Remover')) {
       db.viagens.splice(currentViagemIdx, 1);
       saveDB(); closeViagemDetail();
     }
@@ -3371,7 +3445,7 @@
         const emptySlot = v.meuCarro.passageiros.findIndex((p,i) => i < maxP && !p);
         const idx = emptySlot >= 0 ? emptySlot : v.meuCarro.passageiros.length;
         if (idx < maxP) { v.meuCarro.passageiros[idx] = nome; saveDB(); renderCarros(); }
-        else { alert('Meu carro está cheio!'); }
+        else { chzAlert('Meu carro está cheio!'); }
       } else {
         const carro = v.carros[ci];
         if (!carro.passageiros) carro.passageiros = [];
@@ -3379,7 +3453,7 @@
         const emptySlot = carro.passageiros.findIndex((p,i) => i < maxP && !p);
         const idx = emptySlot >= 0 ? emptySlot : carro.passageiros.length;
         if (idx < maxP) { carro.passageiros[idx] = nome; saveDB(); renderCarros(); }
-        else { alert('Este carro está cheio!'); }
+        else { chzAlert('Este carro está cheio!'); }
       }
     }
     // Keep modal open for more additions
@@ -3505,8 +3579,8 @@
   // ── SAVE JOVEM ──
   function saveJovem() {
     const nome = document.getElementById('nj-nome').value.trim();
-    if (!nome) { alert('Digite um nome!'); return; }
-    if (!_njGenero) { alert('Seleciona o gênero!'); return; }
+    if (!nome) { chzAlert('Digite um nome!'); return; }
+    if (!_njGenero) { chzAlert('Seleciona o gênero!'); return; }
     const aniv = document.getElementById('nj-aniv').value.trim();
     db.jovens.push({
       name: nome,
@@ -3535,7 +3609,7 @@
   // ── SAVE VIAGEM ──
   function saveViagem() {
     const destino = (document.getElementById('nv-dest-input')?.value || '').trim();
-    if (!destino) { alert('Seleciona um destino!'); return; }
+    if (!destino) { chzAlert('Seleciona um destino!'); return; }
     const evento = (document.getElementById('nv-evento-input').value || '').trim();
     const mesmodia = document.getElementById('nv-mesmo-dia').checked;
     const dataIda   = document.getElementById('nv-data-ida').value;
@@ -3581,7 +3655,7 @@
     const date = document.getElementById('inter-date').value;
     const realTipo = document.getElementById('inter-tipo').value;
     const note = realTipo==='outro' ? document.getElementById('inter-outro').value : '';
-    if (!date) { alert('Selecione uma data!'); return; }
+    if (!date) { chzAlert('Selecione uma data!'); return; }
     db.jovens[idx].interactions.push({ tipo:realTipo, date, note });
     saveDB();
     renderInterHist(idx, realTipo);
@@ -3595,8 +3669,8 @@
     if (perfilIdx===idx) renderPerfilHist(idx);
   }
 
-  function delJovem(idx) {
-    if (confirm(`Remover ${db.jovens[idx].name}?`)) { db.jovens.splice(idx,1); saveDB(); renderTracker(); }
+  async function delJovem(idx) {
+    if (await chzConfirm(`Remover ${db.jovens[idx].name}?`, 'Remover')) { db.jovens.splice(idx,1); saveDB(); renderTracker(); }
   }
 
 
@@ -3918,7 +3992,7 @@
     const val = inp.value.trim();
     if (!val) return;
     if (!db.luoghi) db.luoghi = [];
-    if (db.luoghi.includes(val)) { alert('Esta localidade já existe!'); return; }
+    if (db.luoghi.includes(val)) { chzAlert('Esta localidade já existe!'); return; }
     db.luoghi.push(val);
     db.luoghi.sort();
     inp.value = '';
@@ -3928,8 +4002,8 @@
     updateStats();
   }
 
-  function delLuogo(idx) {
-    if (confirm(`Remover "${db.luoghi[idx]}"?`)) {
+  async function delLuogo(idx) {
+    if (await chzConfirm(`Remover "${db.luoghi[idx]}"?`, 'Remover')) {
       db.luoghi.splice(idx, 1);
       saveDB();
       refreshLuoghiSelects();
@@ -3955,7 +4029,7 @@
   async function saveGistToken() {
     const input = document.getElementById('gist-token-input');
     const val = (input?.value || '').trim();
-    if (!val) { alert('Cola o token primeiro.'); return; }
+    if (!val) { chzAlert('Cola o token primeiro.'); return; }
     localStorage.setItem(GIST_TOKEN_KEY, val);
     renderGistStatus(); // já preenche o campo com o token guardado (mostrado como ●●●)
 
@@ -3965,11 +4039,11 @@
     if (!localStorage.getItem(GIST_ID_KEY)) {
       const encontrado = await tentarDescobrirGist(val);
       if (encontrado) {
-        alert('✅ Token guardado — encontrei automaticamente um backup existente na tua conta! Já podes usar "Restaurar do Gist".');
+        chzAlert('✅ Token guardado — encontrei automaticamente um backup existente na tua conta! Já podes usar "Restaurar do Gist".');
         return;
       }
     }
-    alert('✅ Token guardado neste dispositivo.');
+    chzAlert('✅ Token guardado neste dispositivo.');
   }
 
   async function tentarDescobrirGist(token) {
@@ -3994,19 +4068,19 @@
   function ligarGistManual() {
     const input = document.getElementById('gist-link-input');
     const val = (input?.value || '').trim();
-    if (!val) { alert('Cola o link ou o ID do Gist primeiro.'); return; }
+    if (!val) { chzAlert('Cola o link ou o ID do Gist primeiro.'); return; }
     // Aceita tanto um link completo (https://gist.github.com/user/ID) como só o ID
     const match = val.match(/gist\.github\.com\/[^\/]+\/([a-f0-9]+)/i);
     const gistId = match ? match[1] : val.replace(/[^a-f0-9]/gi, '');
-    if (!gistId) { alert('Não consegui identificar o ID do Gist nesse texto.'); return; }
+    if (!gistId) { chzAlert('Não consegui identificar o ID do Gist nesse texto.'); return; }
     localStorage.setItem(GIST_ID_KEY, gistId);
     if (input) input.value = '';
     renderGistStatus();
-    alert('✅ Gist ligado! Já podes usar "Restaurar do Gist".');
+    chzAlert('✅ Gist ligado! Já podes usar "Restaurar do Gist".');
   }
 
-  function removeGistToken() {
-    if (!confirm('Remover o token guardado? Deixarás de poder fazer backup/restauro até configurares outro.')) return;
+  async function removeGistToken() {
+    if (!(await chzConfirm('Remover o token guardado? Deixarás de poder fazer backup/restauro até configurares outro.', 'Remover'))) return;
     localStorage.removeItem(GIST_TOKEN_KEY);
     const input = document.getElementById('gist-token-input');
     if (input) input.value = '';
@@ -4047,7 +4121,7 @@
 
   async function backupToGist() {
     const token = getGistToken();
-    if (!token) { alert('Configura primeiro o token do GitHub.'); return; }
+    if (!token) { chzAlert('Configura primeiro o token do GitHub.'); return; }
     const btn = document.getElementById('gist-backup-btn');
     if (btn) { btn.disabled = true; btn.textContent = '☁️ A enviar...'; }
     try {
@@ -4086,9 +4160,9 @@
       localStorage.setItem(GIST_ID_KEY, data.id);
       localStorage.setItem(GIST_LAST_KEY, new Date().toISOString());
       renderGistStatus();
-      alert('✅ Backup enviado para o Gist privado com sucesso!');
+      chzAlert('✅ Backup enviado para o Gist privado com sucesso!');
     } catch (err) {
-      alert('❌ Falha no backup: ' + err.message);
+      chzAlert('❌ Falha no backup: ' + err.message);
     } finally {
       if (btn) { btn.disabled = false; btn.textContent = '☁️ Backup agora'; }
       renderGistStatus();
@@ -4098,11 +4172,11 @@
   async function restoreFromGist() {
     const token = getGistToken();
     let gistId = localStorage.getItem(GIST_ID_KEY);
-    if (!token) { alert('Configura primeiro o token do GitHub.'); return; }
+    if (!token) { chzAlert('Configura primeiro o token do GitHub.'); return; }
     // Se ainda não temos referência local, tenta encontrar automaticamente antes de desistir
     if (!gistId) {
       const encontrado = await tentarDescobrirGist(token);
-      if (!encontrado) { alert('Ainda não existe nenhum backup no Gist. Faz um "Backup agora" primeiro, ou liga manualmente um Gist existente.'); return; }
+      if (!encontrado) { chzAlert('Ainda não existe nenhum backup no Gist. Faz um "Backup agora" primeiro, ou liga manualmente um Gist existente.'); return; }
       gistId = localStorage.getItem(GIST_ID_KEY);
     }
     const btn = document.getElementById('gist-restore-btn');
@@ -4124,17 +4198,17 @@
       // Resumo antes de confirmar (mesmo espírito do importData já existente)
       const counts = Object.entries(imported).filter(([,v]) => Array.isArray(v)).map(([k,v]) => `${k}: ${v.length}`).join('\n');
       const dataGist = data.updated_at ? new Date(data.updated_at).toLocaleString('pt-BR') : 'desconhecida';
-      const ok = confirm(`Restaurar este backup do Gist?\n\nData do backup: ${dataGist}\n\n${counts}\n\nIsto vai substituir os dados atuais deste dispositivo.`);
+      const ok = await chzConfirm(`Restaurar este backup do Gist?\n\nData do backup: ${dataGist}\n\n${counts}\n\nIsto vai substituir os dados atuais deste dispositivo.`, 'Restaurar');
       if (!ok) return;
 
       db = { ...db, ...imported };
       saveDB();
       const count = Object.values(imported).reduce((n, v) => n + (Array.isArray(v) ? v.length : 0), 0);
       logImport('Gist (' + dataGist + ')', count);
-      alert('✅ Dados restaurados do Gist com sucesso!');
+      chzAlert('✅ Dados restaurados do Gist com sucesso!');
       location.reload();
     } catch (err) {
-      alert('❌ Falha ao restaurar: ' + err.message);
+      chzAlert('❌ Falha ao restaurar: ' + err.message);
     } finally {
       if (btn) { btn.disabled = false; btn.textContent = '⬇️ Restaurar do Gist'; }
       renderGistStatus();
@@ -4166,8 +4240,8 @@
           // Count total records
           const count = Object.values(imported).reduce((n, v) => n + (Array.isArray(v) ? v.length : 0), 0);
           logImport(file.name, count);
-          alert('✅ Dados importados com sucesso!');
-        } catch { alert('❌ Arquivo inválido.'); }
+          chzAlert('✅ Dados importados com sucesso!');
+        } catch { chzAlert('❌ Arquivo inválido.'); }
       };
       reader.readAsText(file);
     };
@@ -4453,8 +4527,8 @@
     openEditEvento(idx);
   }
 
-  function delEventoFromDia(idx) {
-    if (confirm('Remover este evento?')) {
+  async function delEventoFromDia(idx) {
+    if (await chzConfirm('Remover este evento?', 'Remover')) {
       db.eventos.splice(idx, 1);
       saveDB();
       closeModal('modal-dia');
@@ -4914,7 +4988,7 @@
       palavra: document.getElementById('ev-palavra').value,
       notas: document.getElementById('ev-notas').value,
     };
-    if (!ev.data) { alert('Selecione uma data!'); return; }
+    if (!ev.data) { chzAlert('Selecione uma data!'); return; }
 
     // Preservar _eventoRef existente ao editar
     if (eventoEditIdx !== null) {
@@ -4966,8 +5040,8 @@
     }
   }
 
-  function delEvento(idx) {
-    if (confirm('Remover este evento?')) {
+  async function delEvento(idx) {
+    if (await chzConfirm('Remover este evento?', 'Remover')) {
       db.eventos.splice(idx, 1);
       saveDB();
       renderCalendar();
@@ -5192,7 +5266,7 @@
 
   function saveServico() {
     const data = document.getElementById('serv-data').value;
-    if (!data) { alert('Selecione uma data!'); return; }
+    if (!data) { chzAlert('Selecione uma data!'); return; }
     const s = {
       tipo: document.getElementById('serv-tipo').value,
       data,
@@ -5217,8 +5291,8 @@
     saveDB(); closeModal('modal-servico'); renderServicos(); renderAgenda(); updateStats();
   }
 
-  function delServico(idx) {
-    if (confirm('Remover este serviço?')) {
+  async function delServico(idx) {
+    if (await chzConfirm('Remover este serviço?', 'Remover')) {
       db.servicos.splice(idx, 1);
       saveDB(); renderServicos(); updateStats();
     }
@@ -5318,9 +5392,9 @@
 
   function salvarNovoLivro() {
     const nome = document.getElementById('novo-livro-input').value.trim();
-    if (!nome) { alert('Escolhe um livro!'); return; }
+    if (!nome) { chzAlert('Escolhe um livro!'); return; }
     if (!db.livros) db.livros = [];
-    if (db.livros.find(l => l.nome === nome)) { alert('Este livro já existe!'); closeModal('modal-novo-livro'); abrirLivro(db.livros.findIndex(l => l.nome === nome)); return; }
+    if (db.livros.find(l => l.nome === nome)) { chzAlert('Este livro já existe!'); closeModal('modal-novo-livro'); abrirLivro(db.livros.findIndex(l => l.nome === nome)); return; }
     const livro = { nome, capitulos: [], dicionario: [], versiculos: [] };
     db.livros.push(livro);
     saveDB();
@@ -5372,7 +5446,7 @@
       html += `<div style="font-size:13px;color:var(--muted);padding:10px 0 16px;text-align:center">Nenhum capítulo ainda.</div>`;
     } else {
       livro.capitulos.forEach((cap, ci) => {
-        const preview = (cap.texto||'').slice(0, 80) + ((cap.texto||'').length > 80 ? '…' : '');
+        const preview = _stripInlineMarkup(cap.texto||'').slice(0, 80) + (_stripInlineMarkup(cap.texto||'').length > 80 ? '…' : '');
         html += `
         <div onclick="verCapitulo(${ci})" style="background:var(--surface);border:1px solid var(--border);border-left:3px solid ${color};border-radius:var(--radius);padding:12px 14px;margin-bottom:8px;cursor:pointer">
           <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
@@ -5401,7 +5475,7 @@
             <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
               <div style="flex:1;min-width:0">
                 <div style="font-weight:600;font-size:14px;margin-bottom:3px">${t.termo}</div>
-                <div style="font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${(t.def||'').slice(0,80)}${(t.def||'').length>80?'…':''}</div>
+                <div style="font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${_stripInlineMarkup(t.def||'').slice(0,80)}${_stripInlineMarkup(t.def||'').length>80?'…':''}</div>
               </div>
               <span style="font-size:18px;color:var(--muted);flex-shrink:0">›</span>
             </div>
@@ -5448,7 +5522,7 @@
       </div>
       <div style="display:flex;gap:8px;margin-top:16px">
         <button onclick="closeModal('modal-ver-nota');openEditCapitulo(${ci})" style="flex:1;padding:10px;border-radius:10px;border:1px solid var(--border);background:var(--surface);font-size:13px;cursor:pointer">✏️ Editar</button>
-        <button onclick="if(confirm('Remover?')){closeModal('modal-ver-nota');delCapitulo(${ci})}" style="padding:10px 14px;border-radius:10px;border:1px solid #fbddd5;background:none;font-size:13px;cursor:pointer;color:#E07B54">🗑</button>
+        <button onclick="chzConfirmDelete('Remover?', () => {closeModal('modal-ver-nota');delCapitulo(${ci})})" style="padding:10px 14px;border-radius:10px;border:1px solid #fbddd5;background:none;font-size:13px;cursor:pointer;color:#E07B54">🗑</button>
         <button onclick="closeModal('modal-ver-nota')" style="flex:1;padding:10px;border-radius:10px;border:none;background:${color};color:white;font-size:13px;cursor:pointer">Fechar</button>
       </div>`;
     openModal('modal-ver-nota');
@@ -5462,11 +5536,11 @@
       <div style="margin-bottom:16px">
         <div style="font-size:11px;font-weight:600;color:${color};text-transform:uppercase;margin-bottom:6px">📚 Dicionário — ${livro.nome}</div>
         <div style="font-size:22px;font-weight:700;margin-bottom:12px">${t.termo}</div>
-        <div style="border-top:1px solid var(--border);padding-top:14px;font-size:14px;line-height:1.7">${t.def||''}</div>
+        <div style="border-top:1px solid var(--border);padding-top:14px;font-size:14px;line-height:1.7">${renderNotaTexto(t.def||'')}</div>
       </div>
       <div style="display:flex;gap:8px;margin-top:16px">
         <button onclick="closeModal('modal-ver-nota');openEditDicionario(${ti})" style="flex:1;padding:10px;border-radius:10px;border:1px solid var(--border);background:var(--surface);font-size:13px;cursor:pointer">✏️ Editar</button>
-        <button onclick="if(confirm('Remover?')){closeModal('modal-ver-nota');delDicionario(${ti})}" style="padding:10px 14px;border-radius:10px;border:1px solid #fbddd5;background:none;font-size:13px;cursor:pointer;color:#E07B54">🗑</button>
+        <button onclick="chzConfirmDelete('Remover?', () => {closeModal('modal-ver-nota');delDicionario(${ti})})" style="padding:10px 14px;border-radius:10px;border:1px solid #fbddd5;background:none;font-size:13px;cursor:pointer;color:#E07B54">🗑</button>
         <button onclick="closeModal('modal-ver-nota')" style="flex:1;padding:10px;border-radius:10px;border:none;background:${color};color:white;font-size:13px;cursor:pointer">Fechar</button>
       </div>`;
     openModal('modal-ver-nota');
@@ -5480,11 +5554,11 @@
       <div style="margin-bottom:16px">
         <div style="font-size:11px;font-weight:600;color:${color};text-transform:uppercase;margin-bottom:6px">⭐ Versículos — ${livro.nome}</div>
         <div style="font-size:15px;font-weight:600;color:${color};margin-bottom:14px">📖 ${v.ref}</div>
-        <div style="border-top:1px solid var(--border);padding-top:14px;font-size:16px;font-style:italic;line-height:1.8">"${v.texto}"</div>
+        <div style="border-top:1px solid var(--border);padding-top:14px;font-size:16px;font-style:italic;line-height:1.8">"${formatInline((v.texto||'').replace(/\n/g,'<br>'))}"</div>
       </div>
       <div style="display:flex;gap:8px;margin-top:16px">
         <button onclick="closeModal('modal-ver-nota');openEditVersiculo(${vi})" style="flex:1;padding:10px;border-radius:10px;border:1px solid var(--border);background:var(--surface);font-size:13px;cursor:pointer">✏️ Editar</button>
-        <button onclick="if(confirm('Remover?')){closeModal('modal-ver-nota');delVersiculo(${vi})}" style="padding:10px 14px;border-radius:10px;border:1px solid #fbddd5;background:none;font-size:13px;cursor:pointer;color:#E07B54">🗑</button>
+        <button onclick="chzConfirmDelete('Remover?', () => {closeModal('modal-ver-nota');delVersiculo(${vi})})" style="padding:10px 14px;border-radius:10px;border:1px solid #fbddd5;background:none;font-size:13px;cursor:pointer;color:#E07B54">🗑</button>
         <button onclick="closeModal('modal-ver-nota')" style="flex:1;padding:10px;border-radius:10px;border:none;background:${color};color:white;font-size:13px;cursor:pointer">Fechar</button>
       </div>`;
     openModal('modal-ver-nota');
@@ -5501,8 +5575,8 @@
     }
   }
 
-  function delLivro(idx) {
-    if (confirm('Remover este livro e todo o seu conteúdo?')) {
+  async function delLivro(idx) {
+    if (await chzConfirm('Remover este livro e todo o seu conteúdo?', 'Remover')) {
       db.livros.splice(idx, 1);
       saveDB();
       fecharLivro();
@@ -5529,7 +5603,7 @@
   function salvarCapitulo() {
     const num = document.getElementById('cap-num').value.trim();
     const texto = document.getElementById('cap-texto').value.trim();
-    if (!num) { alert('Indica o número do capítulo!'); return; }
+    if (!num) { chzAlert('Indica o número do capítulo!'); return; }
     const cap = { num, texto };
     const livro = db.livros[livroAtualIdx];
     if (!livro.capitulos) livro.capitulos = [];
@@ -5538,8 +5612,8 @@
     livro.capitulos.sort((a,b) => parseInt(a.num) - parseInt(b.num));
     saveDB(); closeModal('modal-capitulo'); renderLivroDetalhe();
   }
-  function delCapitulo(ci) {
-    if (confirm('Remover este capítulo?')) {
+  async function delCapitulo(ci) {
+    if (await chzConfirm('Remover este capítulo?', 'Remover')) {
       db.livros[livroAtualIdx].capitulos.splice(ci, 1);
       saveDB(); renderLivroDetalhe();
     }
@@ -5565,15 +5639,15 @@
   function salvarDicionario() {
     const termo = document.getElementById('dict-termo').value.trim();
     const def = document.getElementById('dict-def').value.trim();
-    if (!termo) { alert('Indica o termo!'); return; }
+    if (!termo) { chzAlert('Indica o termo!'); return; }
     const livro = db.livros[livroAtualIdx];
     if (!livro.dicionario) livro.dicionario = [];
     if (dictEditIdx !== null) livro.dicionario[dictEditIdx] = { termo, def };
     else livro.dicionario.push({ termo, def });
     saveDB(); closeModal('modal-dicionario'); renderLivroDetalhe();
   }
-  function delDicionario(ti) {
-    if (confirm('Remover este termo?')) {
+  async function delDicionario(ti) {
+    if (await chzConfirm('Remover este termo?', 'Remover')) {
       db.livros[livroAtualIdx].dicionario.splice(ti, 1);
       saveDB(); renderLivroDetalhe();
     }
@@ -5599,15 +5673,15 @@
   function salvarVersiculo() {
     const ref = document.getElementById('vers-ref').value.trim();
     const texto = document.getElementById('vers-texto').value.trim();
-    if (!ref || !texto) { alert('Preenche a referência e o texto!'); return; }
+    if (!ref || !texto) { chzAlert('Preenche a referência e o texto!'); return; }
     const livro = db.livros[livroAtualIdx];
     if (!livro.versiculos) livro.versiculos = [];
     if (versEditIdx !== null) livro.versiculos[versEditIdx] = { ref, texto };
     else livro.versiculos.push({ ref, texto });
     saveDB(); closeModal('modal-versiculo-livro'); renderLivroDetalhe();
   }
-  function delVersiculo(vi) {
-    if (confirm('Remover este versículo?')) {
+  async function delVersiculo(vi) {
+    if (await chzConfirm('Remover este versículo?', 'Remover')) {
       db.livros[livroAtualIdx].versiculos.splice(vi, 1);
       saveDB(); renderLivroDetalhe();
     }
@@ -5657,7 +5731,7 @@
               <span style="font-size:13px;font-weight:600">${l.passagem}</span>
             </div>
             <div style="font-size:11px;color:var(--muted);margin-bottom:${l.notas?'4px':'0'}">${dateStr}</div>
-            ${l.notas ? `<div style="font-size:12px;color:var(--muted);font-style:italic;white-space:pre-wrap">${l.notas}</div>` : ''}
+            ${l.notas ? `<div style="font-size:12px;color:var(--muted);font-style:italic">${renderNotaTexto(l.notas)}</div>` : ''}
           </div>
           <div style="display:flex;gap:4px;flex-shrink:0">
             <button onclick="openEditLeitura(${realIdx})" style="background:none;border:1px solid var(--border);border-radius:8px;padding:4px 8px;font-size:12px;cursor:pointer">✏️</button>
@@ -5690,7 +5764,7 @@
   function saveLeitura() {
     const passagem = document.getElementById('leit-passagem').value.trim();
     const data = document.getElementById('leit-data').value;
-    if (!passagem || !data) { alert('Preenche a passagem e a data!'); return; }
+    if (!passagem || !data) { chzAlert('Preenche a passagem e a data!'); return; }
     const l = { passagem, data, notas: document.getElementById('leit-notas').value.trim() };
     if (!db.leituras) db.leituras = [];
     if (leitEditIdx !== null) db.leituras[leitEditIdx] = l;
@@ -5698,8 +5772,8 @@
     saveDB(); closeModal('modal-leitura'); renderLeitura();
   }
 
-  function delLeitura(idx) {
-    if (confirm('Remover esta leitura?')) {
+  async function delLeitura(idx) {
+    if (await chzConfirm('Remover esta leitura?', 'Remover')) {
       db.leituras.splice(idx, 1);
       saveDB(); renderLeitura();
     }
@@ -5757,6 +5831,10 @@
       (m, ref) => `<span onclick="mostrarVersiculoPeek(event,'${ref.replace(/'/g,"\\'")}')" style="display:inline-block;background:var(--accent4);color:white;border-radius:6px;padding:1px 7px;font-size:11px;font-weight:600;margin:0 2px;cursor:pointer;text-decoration:underline dotted;text-decoration-color:rgba(255,255,255,0.6)">${ref}</span>`);
     // [Referência] → versículo em destaque simples (sem busca automática)
     text = text.replace(/\[([^\]]+)\]/g, '<span style="display:inline-block;background:var(--accent4);color:white;border-radius:6px;padding:1px 7px;font-size:11px;font-weight:600;margin:0 2px">$1</span>');
+    // ==verde== · ~~azul~~ · !!rosa!! → marca-texto (destaque de cor)
+    text = text.replace(/==(.+?)==/g, '<mark class="chz-hl-verde">$1</mark>');
+    text = text.replace(/~~(.+?)~~/g, '<mark class="chz-hl-azul">$1</mark>');
+    text = text.replace(/!!(.+?)!!/g, '<mark class="chz-hl-rosa">$1</mark>');
     // **negrito**
     text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
     return text;
@@ -5832,7 +5910,13 @@
     if (!texto) return '';
     const linha = (texto.split('\n').find(l => l.trim() !== '') || '').trim();
     // Remove marcadores de formatação (não faz sentido em preview de 1 linha)
-    return linha.replace(/^- /, '').replace(/\*\*/g, '').replace(/\[([^\]]+)\]/g, '$1');
+    return linha.replace(/^- /, '').replace(/\*\*/g, '').replace(/==(.+?)==/g, '$1').replace(/~~(.+?)~~/g, '$1').replace(/!!(.+?)!!/g, '$1').replace(/\[([^\]]+)\]/g, '$1');
+  }
+
+  // Remove marcadores de formatação sem se limitar à 1ª linha — usado em pré-visualizações mais longas
+  function _stripInlineMarkup(texto) {
+    if (!texto) return '';
+    return texto.replace(/\*\*/g, '').replace(/==(.+?)==/g, '$1').replace(/~~(.+?)~~/g, '$1').replace(/!!(.+?)!!/g, '$1').replace(/\[([^\]]+)\]/g, '$1');
   }
 
   function _makeCurCard(c, color) {
@@ -5974,7 +6058,7 @@
   async function saveCuriosidade() {
     const titulo = document.getElementById('cur-titulo').value.trim();
     const texto = document.getElementById('cur-texto').value.trim();
-    if (!titulo && !texto) { alert('Preenche o título ou conteúdo!'); return; }
+    if (!titulo && !texto) { chzAlert('Preenche o título ou conteúdo!'); return; }
     if (!db.curiosidades) db.curiosidades = [];
 
     const btn = document.getElementById('cur-save-btn');
@@ -5995,8 +6079,8 @@
     saveDB(); closeModal('modal-curiosidade'); renderCuriosidades();
   }
 
-  function delCuriosidade(idx) {
-    if(confirm('Remover esta nota?')){db.curiosidades.splice(idx,1);saveDB();renderCuriosidades();}
+  async function delCuriosidade(idx) {
+    if(await chzConfirm('Remover esta nota?', 'Remover')){db.curiosidades.splice(idx,1);saveDB();renderCuriosidades();}
   }
 
   // ── FAVORITOS ──
@@ -6013,13 +6097,13 @@
     }
     container.innerHTML = list.map(f => {
       const realIdx = db.favoritos.indexOf(f);
-      const previewTexto = (f.texto||'').slice(0, 120) + ((f.texto||'').length > 120 ? '…' : '');
+      const previewTexto = _stripInlineMarkup(f.texto||'').slice(0, 120) + (_stripInlineMarkup(f.texto||'').length > 120 ? '…' : '');
       return `<div onclick="openVerFavorito(${realIdx})" style="background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--accent4);border-radius:var(--radius);padding:12px 14px;margin-bottom:8px;cursor:pointer">
         <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start">
           <div style="flex:1;min-width:0">
             <div style="font-size:12px;font-weight:700;color:var(--accent4);margin-bottom:4px">⭐ ${f.ref}</div>
             ${previewTexto ? `<div style="font-size:13px;font-style:italic;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">"${previewTexto}"</div>` : ''}
-            ${f.nota ? `<div style="font-size:11px;color:var(--muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${f.nota}</div>` : ''}
+            ${f.nota ? `<div style="font-size:11px;color:var(--muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${_stripInlineMarkup(f.nota)}</div>` : ''}
           </div>
           <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0">
             <button onclick="event.stopPropagation();openEditFavorito(${realIdx})" style="background:none;border:1px solid var(--border);border-radius:8px;padding:4px 8px;font-size:12px;cursor:pointer">✏️</button>
@@ -6036,8 +6120,8 @@
       <div style="margin-bottom:16px">
         <div style="font-size:12px;font-weight:700;color:var(--accent4);text-transform:uppercase;margin-bottom:6px">⭐ Favorito</div>
         <div style="font-size:20px;font-weight:700;margin-bottom:10px">${f.ref}</div>
-        ${f.texto ? `<div style="font-size:15px;font-style:italic;color:var(--text);line-height:1.6;border-top:1px solid var(--border);padding-top:14px;margin-bottom:12px">"${f.texto}"</div>` : ''}
-        ${f.nota ? `<div style="font-size:13px;color:var(--muted)">${f.nota}</div>` : ''}
+        ${f.texto ? `<div style="font-size:15px;font-style:italic;color:var(--text);line-height:1.6;border-top:1px solid var(--border);padding-top:14px;margin-bottom:12px">"${formatInline(f.texto.replace(/\n/g,'<br>'))}"</div>` : ''}
+        ${f.nota ? `<div style="font-size:13px;color:var(--muted)">${renderNotaTexto(f.nota)}</div>` : ''}
       </div>
       <div style="display:flex;gap:8px;margin-top:16px">
         <button onclick="closeModal('modal-ver-nota');openEditFavorito(${idx})" style="flex:1;padding:10px;border-radius:10px;border:1px solid var(--border);background:var(--surface);font-size:13px;cursor:pointer">✏️ Editar</button>
@@ -6064,7 +6148,7 @@
 
   function saveFavorito() {
     const ref = document.getElementById('fav-ref').value.trim();
-    if (!ref) { alert('Preenche a referência!'); return; }
+    if (!ref) { chzAlert('Preenche a referência!'); return; }
     if (!db.favoritos) db.favoritos = [];
     const obj = { ref, texto: document.getElementById('fav-texto').value.trim(), nota: document.getElementById('fav-nota').value.trim() };
     if (favEditIdx !== null) db.favoritos[favEditIdx] = obj;
@@ -6072,8 +6156,8 @@
     saveDB(); closeModal('modal-favorito'); renderFavoritos();
   }
 
-  function delFavorito(idx) {
-    if(confirm('Remover este favorito?')){db.favoritos.splice(idx,1);saveDB();renderFavoritos();}
+  async function delFavorito(idx) {
+    if(await chzConfirm('Remover este favorito?', 'Remover')){db.favoritos.splice(idx,1);saveDB();renderFavoritos();}
   }
 
   // ── IDEIAS ──
@@ -6158,7 +6242,7 @@
   function saveIdeia() {
     const titulo = document.getElementById('ideia-titulo').value.trim();
     const texto = document.getElementById('ideia-texto').value.trim();
-    if (!texto && !titulo) { alert('Escreve algo!'); return; }
+    if (!texto && !titulo) { chzAlert('Escreve algo!'); return; }
     if (!db.ideias) db.ideias = [];
     const now = new Date().toISOString();
     if (ideiaEditIdx !== null) {
@@ -6174,8 +6258,8 @@
     renderIdeias();
   }
 
-  function delIdeia(idx) {
-    if (confirm('Remover esta ideia?')) {
+  async function delIdeia(idx) {
+    if (await chzConfirm('Remover esta ideia?', 'Remover')) {
       db.ideias.splice(idx, 1);
       saveDB();
       renderIdeias();
@@ -6259,7 +6343,7 @@
 
   function saveEditEncontro() {
     const nome = document.getElementById('enc-nome').value.trim();
-    if (!nome) { alert('Dá um nome ao encontro!'); return; }
+    if (!nome) { chzAlert('Dá um nome ao encontro!'); return; }
     const enc = db.encontros[encEditIdx];
     const dataFormatted = enc.data.split('-').reverse().join('/');
     const oldNome = enc.nome;
@@ -6362,7 +6446,7 @@
 
   function saveEncontro() {
     const nome = document.getElementById('enc-nome').value.trim();
-    if (!nome) { alert('Dá um nome ao encontro!'); return; }
+    if (!nome) { chzAlert('Dá um nome ao encontro!'); return; }
     const data = document.getElementById('enc-data').value || new Date().toISOString().slice(0,10);
     const notas = document.getElementById('enc-notas').value.trim();
     // Save encontro
@@ -6383,9 +6467,9 @@
     renderTracker();
   }
 
-  function deleteEncontro(idx) {
+  async function deleteEncontro(idx) {
     const enc = db.encontros[idx];
-    if (!confirm(`Remover "${enc.nome}"?\nAs interações registradas nas fichas dos jovens presentes também serão removidas.`)) return;
+    if (!(await chzConfirm(`Remover "${enc.nome}"?\nAs interações registradas nas fichas dos jovens presentes também serão removidas.`, 'Remover'))) return;
     // Remove corresponding interactions from each jovem
     const dataFormatted = enc.data.split('-').reverse().join('/');
     (enc.presentes || []).forEach(pName => {
@@ -6609,7 +6693,9 @@
     <div class="modal-title" id="leit-modal-title">Registrar Leitura</div>
     <div class="form-field"><label class="form-label">Passagem (ex: João 3 ou Rm 8:1-17)</label><input class="form-input" type="text" id="leit-passagem" placeholder="Livro cap ou cap:vers-vers"></div>
     <div class="form-field"><label class="form-label">Data</label><input class="form-input" type="date" id="leit-data"></div>
-    <div class="form-field"><label class="form-label">Notas / reflexão</label><textarea class="form-input" id="leit-notas" rows="3" placeholder="O que marcou..." style="resize:vertical;font-family:inherit"></textarea></div>
+    <div class="form-field"><label class="form-label">Notas / reflexão</label>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:6px">**negrito** · - lista · [Jo 3:16] versículo · ==verde== · ~~azul~~ · !!rosa!!</div>
+      <textarea class="form-input" id="leit-notas" rows="3" placeholder="O que marcou..." style="resize:vertical;font-family:inherit"></textarea></div>
     <div class="form-actions">
       <button class="btn-cancel" onclick="closeModal('modal-leitura')">Cancelar</button>
       <button class="btn-save" onclick="saveLeitura()">Salvar</button>
@@ -6642,7 +6728,7 @@
     </div>
     <div class="form-field">
       <label class="form-label">Conteúdo</label>
-      <div style="font-size:11px;color:var(--muted);margin-bottom:6px">**negrito** · - lista · [Jo 3:16] versículo em destaque</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:6px">**negrito** · - lista · [Jo 3:16] versículo em destaque · ==verde== · ~~azul~~ · !!rosa!!</div>
       <textarea class="form-input" id="cur-texto" rows="8" placeholder="Escreve o conteúdo da nota..." style="resize:vertical;font-family:inherit;font-size:13px;line-height:1.6"></textarea>
     </div>
     <div class="form-actions">
@@ -6658,8 +6744,12 @@
     <div class="modal-handle"></div>
     <div class="modal-title" id="fav-modal-title">Novo Favorito</div>
     <div class="form-field"><label class="form-label">Referência (ex: João 3:16)</label><input class="form-input" type="text" id="fav-ref" placeholder="Livro cap:vers"></div>
-    <div class="form-field"><label class="form-label">Texto do versículo</label><textarea class="form-input" id="fav-texto" rows="4" placeholder="Escreve o versículo..." style="resize:vertical;font-family:inherit"></textarea></div>
-    <div class="form-field"><label class="form-label">Nota pessoal</label><input class="form-input" type="text" id="fav-nota" placeholder="Por que este versículo te marcou..."></div>
+    <div class="form-field"><label class="form-label">Texto do versículo</label>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:6px">**negrito** · ==verde== · ~~azul~~ · !!rosa!!</div>
+      <textarea class="form-input" id="fav-texto" rows="4" placeholder="Escreve o versículo..." style="resize:vertical;font-family:inherit"></textarea></div>
+    <div class="form-field"><label class="form-label">Nota pessoal</label>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:6px">**negrito** · ==verde== · ~~azul~~ · !!rosa!!</div>
+      <input class="form-input" type="text" id="fav-nota" placeholder="Por que este versículo te marcou..."></div>
     <div class="form-actions">
       <button class="btn-cancel" onclick="closeModal('modal-favorito')">Cancelar</button>
       <button class="btn-save" onclick="saveFavorito()">Salvar</button>
@@ -6696,7 +6786,7 @@
     </div>
     <div class="form-field">
       <label class="form-label">Explicação</label>
-      <div style="font-size:11px;color:var(--muted);margin-bottom:6px">**negrito** · - lista · [Jo 3:16] versículo</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:6px">**negrito** · - lista · [Jo 3:16] versículo · ==verde== · ~~azul~~ · !!rosa!!</div>
       <textarea class="form-input" id="cap-texto" rows="8" placeholder="Resumo do capítulo..." style="resize:vertical;font-family:inherit;font-size:13px;line-height:1.6"></textarea>
     </div>
     <div class="form-actions">
@@ -6715,6 +6805,7 @@
       <input class="form-input" type="text" id="dict-termo" placeholder="ex: Jugo, Moisés...">
     </div>
     <div class="form-field"><label class="form-label">Definição</label>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:6px">**negrito** · - lista · [Jo 3:16] versículo · ==verde== · ~~azul~~ · !!rosa!!</div>
       <textarea class="form-input" id="dict-def" rows="4" placeholder="O que significa..." style="resize:vertical;font-family:inherit;font-size:13px"></textarea>
     </div>
     <div class="form-actions">
@@ -6737,6 +6828,7 @@
       </div>
     </div>
     <div class="form-field"><label class="form-label">Texto do versículo</label>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:6px">**negrito** · ==verde== · ~~azul~~ · !!rosa!!</div>
       <textarea class="form-input" id="vers-texto" rows="4" placeholder="Escreve o versículo..." style="resize:vertical;font-family:inherit;font-size:13px;line-height:1.6"></textarea>
     </div>
     <div class="form-actions">
