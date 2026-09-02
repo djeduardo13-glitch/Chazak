@@ -1263,6 +1263,7 @@
     </div>
     <div class="form-field"><label class="form-label">Aniversário (dd/mm/aaaa)</label><input class="form-input" type="text" id="nj-aniv" placeholder="ex: 24/10/2008" oninput="formatAnivInput(this)" maxlength="10"></div>
     <div id="nj-grupo-preview" style="font-size:12px;color:var(--accent3);padding:4px 0 8px 2px;display:none"></div>
+    <div class="form-field"><label class="form-label">Batismo (dd/mm/aaaa) <span style="font-weight:400;color:var(--muted)">(opcional)</span></label><input class="form-input" type="text" id="nj-batismo" placeholder="ex: 12/06/2018" oninput="formatDateSimples(this)" maxlength="10"></div>
     <div class="form-field"><label class="form-label">Telefone</label><input class="form-input" type="text" id="nj-tel" placeholder="+39 ..."></div>
     <div class="form-field"><label class="form-label">Observações</label><input class="form-input" type="text" id="nj-obs" placeholder="Notas livres..."></div>
     <div class="form-field">
@@ -1450,32 +1451,38 @@
   <div class="modal-sheet">
     <div class="modal-handle"></div>
     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">
-      <div class="modal-title" id="perfil-nome" style="margin-bottom:0"></div>
-      <button onclick="openEditJovem()" style="background:var(--bg);border:1px solid var(--border);border-radius:100px;padding:6px 12px;font-size:12px;cursor:pointer;color:var(--muted)">✏️ Editar</button>
-    </div>
-    <div id="perfil-meta" style="margin-bottom:20px"></div>
-    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:20px">
-      <button class="pc-btn" id="pb-presente" onclick="openInterModal(perfilIdx,'presente')">🎁 Presente<span id="pb-presente-date">—</span></button>
-      <button class="pc-btn" id="pb-conversa" onclick="openInterModal(perfilIdx,'conversa')">💬 Conversa<span id="pb-conversa-date">—</span></button>
-      <button class="pc-btn" id="pb-viagem" onclick="openInterModal(perfilIdx,'viagem')">✈️ Viagem<span id="pb-viagem-date">—</span></button>
-      <button class="pc-btn" id="pb-outro" onclick="openInterModal(perfilIdx,'outro')">📝 Outro<span id="pb-outro-date">—</span></button>
-    </div>
-    <div style="margin-bottom:20px">
-      <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:10px">👨‍👩‍👧‍👦 Irmãos</div>
-      <div id="perfil-irmaos-list" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px"></div>
-      <div style="position:relative">
-        <input class="form-input" type="text" id="perfil-irmao-search" placeholder="Buscar jovem..." autocomplete="off"
-          oninput="acIrmao(this.value)" onfocus="acIrmao(this.value)"
-          onblur="setTimeout(()=>{const d=document.getElementById('ac-irmao');if(d)d.style.display='none'},200)"
-          style="font-size:13px">
-        <div id="ac-irmao" style="display:none;position:absolute;z-index:200;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);width:100%;max-height:180px;overflow-y:auto;box-shadow:0 4px 16px rgba(0,0,0,0.1)"></div>
+      <div>
+        <div id="perfil-nome" style="font-family:'Lora',serif;font-size:24px;font-weight:600;line-height:1.2"></div>
+        <div id="perfil-id" style="font-size:11px;color:var(--muted);font-family:monospace;margin-top:4px"></div>
       </div>
+      <button onclick="openEditJovem()" style="background:var(--bg);border:1px solid var(--border);border-radius:100px;padding:6px 12px;font-size:12px;cursor:pointer;color:var(--muted);flex-shrink:0;margin-left:10px">✏️ Editar</button>
     </div>
-    <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:10px">Histórico completo</div>
-    <div id="perfil-hist"></div>
+
+    <div style="display:flex;gap:8px;margin:18px 0 16px">
+      <div class="filter-chip active" id="perfil-subtab-perfil" onclick="setPerfilSubTab('perfil')" style="flex:1;text-align:center;padding:9px;font-size:13px">Perfil</div>
+      <div class="filter-chip" id="perfil-subtab-interacoes" onclick="setPerfilSubTab('interacoes')" style="flex:1;text-align:center;padding:9px;font-size:13px">Interações</div>
+    </div>
+
+    <!-- ABA PERFIL -->
+    <div id="perfil-tab-perfil">
+      <div id="perfil-info-rows"></div>
+      <div style="margin-top:16px;background:var(--bg);border:1px dashed var(--border);border-radius:12px;padding:12px;text-align:center;font-size:12px;color:var(--muted)">📊 Ranking de presença — em breve</div>
+    </div>
+
+    <!-- ABA INTERAÇÕES -->
+    <div id="perfil-tab-interacoes" style="display:none">
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:20px">
+        <button class="pc-btn" id="pb-presente" onclick="openInterModal(perfilIdx,'presente')">🎁 Presente<span id="pb-presente-date">—</span></button>
+        <button class="pc-btn" id="pb-conversa" onclick="openInterModal(perfilIdx,'conversa')">💬 Conversa<span id="pb-conversa-date">—</span></button>
+        <button class="pc-btn" id="pb-viagem" onclick="openInterModal(perfilIdx,'viagem')">✈️ Viagem<span id="pb-viagem-date">—</span></button>
+        <button class="pc-btn" id="pb-outro" onclick="openInterModal(perfilIdx,'outro')">📝 Outro<span id="pb-outro-date">—</span></button>
+      </div>
+      <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:10px">Histórico completo</div>
+      <div id="perfil-hist"></div>
+    </div>
+
     <div class="form-actions" style="margin-top:16px">
       <button class="btn-cancel" onclick="closeModal('modal-perfil')">Fechar</button>
-      <button onclick="delJovemFromPerfil()" style="background:none;border:1px solid #E07B54;color:#E07B54;border-radius:100px;padding:10px 16px;font-size:12px;cursor:pointer;font-family:inherit">🗑 Remover</button>
     </div>
   </div>
 </div>
@@ -1501,8 +1508,20 @@
     </div>
     <div class="form-field"><label class="form-label">Aniversário (dd/mm/aaaa)</label><input class="form-input" type="text" id="ej-aniv" placeholder="ex: 24/10/2008" oninput="formatAnivInput(this)" maxlength="10"></div>
     <div id="ej-grupo-preview" style="font-size:12px;color:var(--accent3);padding:4px 0 8px 2px;display:none"></div>
+    <div class="form-field"><label class="form-label">Batismo (dd/mm/aaaa) <span style="font-weight:400;color:var(--muted)">(opcional)</span></label><input class="form-input" type="text" id="ej-batismo" placeholder="ex: 12/06/2018" oninput="formatDateSimples(this)" maxlength="10"></div>
     <div class="form-field"><label class="form-label">Telefone</label><input class="form-input" type="text" id="ej-tel"></div>
     <div class="form-field"><label class="form-label">Observações</label><input class="form-input" type="text" id="ej-obs"></div>
+    <div class="form-field">
+      <label class="form-label">Irmãos</label>
+      <div id="ej-irmaos-list" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px"></div>
+      <div style="position:relative">
+        <input class="form-input" type="text" id="ej-irmao-search" placeholder="Buscar jovem..." autocomplete="off"
+          oninput="acIrmao(this.value)" onfocus="acIrmao(this.value)"
+          onblur="setTimeout(()=>{const d=document.getElementById('ac-irmao');if(d)d.style.display='none'},200)"
+          style="font-size:14px">
+        <div id="ac-irmao" style="display:none;position:absolute;z-index:200;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);width:100%;max-height:180px;overflow-y:auto;box-shadow:0 4px 16px rgba(0,0,0,0.1)"></div>
+      </div>
+    </div>
     <div class="form-field">
       <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px;font-weight:500">
         <input type="checkbox" id="ej-ativo" style="width:18px;height:18px;accent-color:var(--accent);cursor:pointer">
@@ -1524,6 +1543,9 @@
       </label>
     </div>
     <div class="form-actions"><button class="btn-cancel" onclick="closeModal('modal-edit-jovem')">Cancelar</button><button class="btn-save" onclick="saveEditJovem()">Salvar</button></div>
+    <div style="margin-top:14px;text-align:center">
+      <span onclick="delJovemFromPerfil()" style="display:inline-block;cursor:pointer;color:#E07B54;font-size:13px;padding:8px 16px;border-radius:100px;border:1px solid #fbddd5;background:#FFF8F6">🗑 Remover jovem</span>
+    </div>
   </div>
 </div>
 
@@ -2615,19 +2637,10 @@
     perfilHistPage = 0;
     const j = db.jovens[idx];
     document.getElementById('perfil-nome').textContent = j.name;
+    document.getElementById('perfil-id').textContent = j.id || '';
 
-    // Meta info
-    const meta = [];
-    if (j.ativo === false) meta.push(`<span style="background:#fbddd5;color:#c0392b;border-radius:100px;padding:3px 10px;font-size:11px;font-weight:600">Inativo</span>`);
-    const grupoAtual = getGrupoAuto(j);
-    if (grupoAtual) meta.push(`<span class="pc-badge">${grupoAtual}</span>`);
-    if (j.aniv) {
-      const idade = calcIdade(j.aniv);
-      const idadeStr = idade !== null ? ` · ${idade} anos` : '';
-      meta.push(`<span style="font-size:12px;color:var(--muted);margin-left:8px">🎂 ${j.aniv}${idadeStr}</span>`);
-    }
-    if (j.tel) meta.push(`<span style="font-size:12px;color:var(--muted);margin-left:8px">📞 ${j.tel}</span>`);
-    document.getElementById('perfil-meta').innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center">${meta.join('')}</div>${j.obs ? `<div style="font-size:12px;color:var(--muted);margin-top:6px;font-style:italic">${j.obs}</div>` : ''}`;
+    renderPerfilInfoRows(idx);
+    setPerfilSubTab('perfil');
 
     // Interaction buttons
     ['presente','conversa','viagem','outro'].forEach(tipo => {
@@ -2640,15 +2653,57 @@
 
     // Full history
     renderPerfilHist(idx);
-    renderPerfilIrmaos(idx);
     openModal('modal-perfil');
   }
 
-  // ── IRMÃOS (ligação por ID — sobrevive a renomeações) ──
-  function renderPerfilIrmaos(idx) {
+  function setPerfilSubTab(tab) {
+    document.getElementById('perfil-subtab-perfil').classList.toggle('active', tab === 'perfil');
+    document.getElementById('perfil-subtab-interacoes').classList.toggle('active', tab === 'interacoes');
+    document.getElementById('perfil-tab-perfil').style.display = tab === 'perfil' ? 'block' : 'none';
+    document.getElementById('perfil-tab-interacoes').style.display = tab === 'interacoes' ? 'block' : 'none';
+  }
+
+  // ── ABA PERFIL — só de leitura; só mostra o que estiver preenchido ──
+  function renderPerfilInfoRows(idx) {
     const j = db.jovens[idx];
+    const container = document.getElementById('perfil-info-rows');
+    if (!container) return;
+    const linhas = [];
+    if (j.ativo === false) linhas.push({ label: '🚫 Estado', value: `<span style="background:#fbddd5;color:#c0392b;border-radius:100px;padding:3px 10px;font-size:11px;font-weight:600">Inativo</span>` });
+    if (j.auxiliar) linhas.push({ label: '🖋️ Auxiliar', value: 'Sim' });
+    const grupo = getGrupoAuto(j);
+    if (grupo) linhas.push({ label: (j.genero === 'M' ? '♂️' : '♀️') + ' Categoria', value: grupo });
+    if (j.aniv) {
+      const idade = calcIdade(j.aniv);
+      linhas.push({ label: '🎂 Aniversário', value: j.aniv + (idade !== null ? ` · ${idade} anos` : '') });
+    }
+    if (j.batismo) {
+      const anosBatismo = calcIdade(j.batismo);
+      linhas.push({ label: '🙏 Batismo', value: j.batismo + (anosBatismo !== null ? ` · há ${anosBatismo} anos` : '') });
+    }
+    const irmaos = (j.irmaosIds || []).map(id => getJovemById(id)).filter(Boolean);
+    if (irmaos.length) {
+      const chips = irmaos.map(ir => `<span onclick="openPerfil(db.jovens.findIndex(x=>x.id==='${ir.id}'))" style="cursor:pointer;background:var(--bg);border:1px solid var(--border);border-radius:100px;padding:3px 10px;font-size:12px">${ir.name}</span>`).join(' ');
+      linhas.push({ label: '👨\u200d👩\u200d👧\u200d👦 Irmãos', value: `<span style="display:flex;flex-wrap:wrap;gap:5px;justify-content:flex-end">${chips}</span>` });
+    }
+    if (j.tel) linhas.push({ label: '📞 Telefone', value: j.tel });
+
+    if (!linhas.length) {
+      container.innerHTML = `<div style="font-size:13px;color:var(--muted);padding:20px 0;text-align:center">Nenhuma informação preenchida ainda.</div>`;
+    } else {
+      container.innerHTML = linhas.map((l, i) => `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 0;${i < linhas.length - 1 ? 'border-bottom:1px solid var(--border);' : ''}font-size:13px"><span style="color:var(--muted);flex-shrink:0">${l.label}</span><span>${l.value}</span></div>`).join('');
+    }
+    if (j.obs) {
+      container.innerHTML += `<div style="padding:10px 0 0;font-size:12px;color:var(--muted);font-style:italic">${j.obs}</div>`;
+    }
+  }
+
+  // ── IRMÃOS — gestão (adicionar/remover) fica só dentro do Editar Jovem ──
+  function renderEjIrmaosList() {
+    if (perfilIdx === null) return;
+    const j = db.jovens[perfilIdx];
     if (!j.irmaosIds) j.irmaosIds = [];
-    const list = document.getElementById('perfil-irmaos-list');
+    const list = document.getElementById('ej-irmaos-list');
     if (!list) return;
     const irmaos = j.irmaosIds.map(id => getJovemById(id)).filter(Boolean);
     if (!irmaos.length) {
@@ -2656,11 +2711,11 @@
     } else {
       list.innerHTML = irmaos.map(irmao => `
         <span style="display:inline-flex;align-items:center;gap:6px;background:var(--bg);border:1px solid var(--border);border-radius:100px;padding:5px 6px 5px 12px;font-size:13px">
-          <span onclick="openPerfil(db.jovens.findIndex(x=>x.id==='${irmao.id}'))" style="cursor:pointer;font-weight:500">${irmao.name}</span>
+          <span style="font-weight:500">${irmao.name}</span>
           <span onclick="removeIrmao('${irmao.id}')" style="cursor:pointer;color:var(--muted);font-size:15px;line-height:1;padding:2px 4px">×</span>
         </span>`).join('');
     }
-    const searchInp = document.getElementById('perfil-irmao-search');
+    const searchInp = document.getElementById('ej-irmao-search');
     if (searchInp) searchInp.value = '';
     const drop = document.getElementById('ac-irmao');
     if (drop) drop.style.display = 'none';
@@ -2694,7 +2749,7 @@
     if (!j.irmaosIds.includes(alvo.id)) j.irmaosIds.push(alvo.id);
     if (!alvo.irmaosIds.includes(j.id)) alvo.irmaosIds.push(j.id);
     saveDB();
-    renderPerfilIrmaos(perfilIdx);
+    renderEjIrmaosList();
   }
 
   function removeIrmao(idAlvo) {
@@ -2704,7 +2759,8 @@
     j.irmaosIds = (j.irmaosIds||[]).filter(id => id !== idAlvo);
     if (alvo) alvo.irmaosIds = (alvo.irmaosIds||[]).filter(id => id !== j.id);
     saveDB();
-    renderPerfilIrmaos(perfilIdx);
+    renderEjIrmaosList();
+    renderPerfilInfoRows(perfilIdx);
   }
 
   const HIST_PAGE_SIZE = 4;
@@ -2803,6 +2859,7 @@
     db.jovens.splice(perfilIdx, 1);
     if (idRemovido) db.jovens.forEach(j => { if (j.irmaosIds) j.irmaosIds = j.irmaosIds.filter(id => id !== idRemovido); });
     saveDB();
+    closeModal('modal-edit-jovem');
     closeModal('modal-perfil');
     renderTracker();
   }
@@ -2812,6 +2869,7 @@
     const j = db.jovens[perfilIdx];
     document.getElementById('ej-nome').value = j.name;
     document.getElementById('ej-aniv').value = anivToTexto(j.aniv || '');
+    document.getElementById('ej-batismo').value = anivToTexto(j.batismo || '');
     document.getElementById('ej-tel').value = j.tel || '';
     document.getElementById('ej-obs').value = j.obs || '';
     document.getElementById('ej-ativo').checked = j.ativo !== false;
@@ -2824,6 +2882,7 @@
     );
     resetGeneroButtons('ej');
     selectGeneroEdit(_ejGenero);
+    renderEjIrmaosList();
     openModal('modal-edit-jovem');
   }
 
@@ -2832,6 +2891,7 @@
     const oldName = j.name;
     j.name = document.getElementById('ej-nome').value.trim() || j.name;
     j.aniv = document.getElementById('ej-aniv').value;
+    j.batismo = document.getElementById('ej-batismo').value;
     j.tel  = document.getElementById('ej-tel').value;
     j.obs  = document.getElementById('ej-obs').value;
     j.ativo = document.getElementById('ej-ativo').checked;
@@ -3638,6 +3698,14 @@
     updateGrupoPreview('ej');
   }
 
+  function formatDateSimples(inp) {
+    // Auto-inserts slashes: dd/mm/aaaa (sem ligação ao grupo automático — usado no Batismo)
+    let v = inp.value.replace(/\D/g,'');
+    if (v.length > 2) v = v.slice(0,2) + '/' + v.slice(2);
+    if (v.length > 5) v = v.slice(0,5) + '/' + v.slice(5);
+    inp.value = v.slice(0,10);
+  }
+
   function formatAnivInput(inp) {
     // Auto-inserts slashes: dd/mm/aaaa
     let v = inp.value.replace(/\D/g,'');
@@ -3688,6 +3756,7 @@
       genero: _njGenero,
       cat: getGrupoAuto({ genero: _njGenero, aniv }),
       aniv,
+      batismo: document.getElementById('nj-batismo').value.trim(),
       tel: document.getElementById('nj-tel').value,
       obs: document.getElementById('nj-obs').value,
       interactions: [],
@@ -3696,6 +3765,7 @@
     });
     document.getElementById('nj-nome').value = '';
     document.getElementById('nj-aniv').value = '';
+    document.getElementById('nj-batismo').value = '';
     document.getElementById('nj-tel').value = '';
     document.getElementById('nj-obs').value = '';
     document.getElementById('nj-ativo').checked = true;
