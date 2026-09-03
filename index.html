@@ -1929,6 +1929,14 @@
     return (db.jovens||[]).find(j => j.id === id) || null;
   }
 
+  // A3 — resolve o nome ATUAL do jovem ligado por ID; sem ligação (ou jovem já
+  // não existe), devolve o texto que estava guardado, tal como sempre foi.
+  function nomeAtualDoJovem(nomeGuardado, jovemId) {
+    if (!jovemId) return nomeGuardado;
+    const j = getJovemById(jovemId);
+    return j ? j.name : nomeGuardado;
+  }
+
   function initJovens() {
     if (!db.jovens || db.jovens.length === 0) {
       db.jovens = [];
@@ -3125,7 +3133,7 @@
       row.className = 'inv-row' + (c.confirmado ? ' confirmed' : '');
       row.innerHTML = `
         <input type="checkbox" class="inv-check" ${c.confirmado?'checked':''} onchange="toggleConvidado(${i},this.checked)">
-        <input type="text" class="inv-nome" value="${c.nome||''}" placeholder="Nome..." onchange="editConvidadoNome(${i},this.value)" ${c.confirmado?'style="text-decoration:line-through;color:#2e7d32"':''}>
+        <input type="text" class="inv-nome" value="${nomeAtualDoJovem(c.nome,c.jovemId)||''}" placeholder="Nome..." onchange="editConvidadoNome(${i},this.value)" ${c.confirmado?'style="text-decoration:line-through;color:#2e7d32"':''}>
         <button class="inv-del" onclick="delConvidado(${i})">×</button>
       `;
       container.appendChild(row);
@@ -3187,7 +3195,9 @@
 
   function editConvidadoNome(i, val) {
     if (currentViagemIdx === null) return;
-    db.viagens[currentViagemIdx].convidados[i].nome = val;
+    const c = db.viagens[currentViagemIdx].convidados[i];
+    c.nome = val;
+    c.jovemId = null; // edição manual desliga a ligação ao jovem
     saveDB();
   }
 
@@ -3213,7 +3223,7 @@
         const inp = document.createElement('input');
         inp.type = 'text'; inp.className = 'posto-input';
         inp.placeholder = `Passageiro ${i+1}`;
-        inp.value = (v.meuCarro.passageiros||[])[i] || '';
+        inp.value = nomeAtualDoJovem((v.meuCarro.passageiros||[])[i] || '', (v.meuCarro.passageirosIds||[])[i]);
         const _i = i;
         const onSave = (el, jovemId) => {
           if (!v.meuCarro.passageiros) v.meuCarro.passageiros = [];
@@ -3238,7 +3248,7 @@
       card.className = 'carro-card';
       card.innerHTML = `
         <div class="carro-header">
-          <div class="carro-titulo">🚗 ${carro.motorista}</div>
+          <div class="carro-titulo">🚗 ${nomeAtualDoJovem(carro.motorista, carro.motoristaId)}</div>
           <div style="display:flex;align-items:center;gap:6px">
             <select onchange="setCarroLugares(${ci},this.value)" style="border:1px solid var(--border);border-radius:100px;padding:4px 10px;font-size:12px;background:var(--bg);color:var(--text)">
               ${[2,3,4,5,6,7,8].map(n=>`<option value="${n}" ${n===carro.lugares?'selected':''}>${n-1} pass.</option>`).join('')}
@@ -3254,7 +3264,7 @@
         const inp = document.createElement('input');
         inp.type = 'text'; inp.className = 'posto-input';
         inp.placeholder = `Passageiro ${i+1}`;
-        inp.value = (carro.passageiros||[])[i] || '';
+        inp.value = nomeAtualDoJovem((carro.passageiros||[])[i] || '', (carro.passageirosIds||[])[i]);
         const _i = i;
         const _carro = carro;
         const onSavePosti = (el, jovemId) => {
@@ -3348,14 +3358,15 @@
     document.querySelectorAll('.posto-input').forEach(el => {
       if (el.value.trim()) nomes.add(el.value.trim());
     });
-    // Motoristas dos outros carros (do DB, não têm posto-input)
+    // Motoristas dos outros carros (do DB, não têm posto-input) — nome atual via ID
     (v.carros||[]).forEach(carro => {
-      if (carro.motorista && carro.motorista.trim()) nomes.add(carro.motorista.trim());
+      const nomeAtual = nomeAtualDoJovem(carro.motorista, carro.motoristaId);
+      if (nomeAtual && nomeAtual.trim()) nomes.add(nomeAtual.trim());
     });
-    // Fallback: DB arrays caso os inputs não estejam visíveis
-    (v.meuCarro?.passageiros||[]).forEach(n => { if(n && n.trim()) nomes.add(n.trim()); });
+    // Fallback: DB arrays caso os inputs não estejam visíveis — também com nome atual
+    (v.meuCarro?.passageiros||[]).forEach((n,i) => { const na = nomeAtualDoJovem(n,(v.meuCarro.passageirosIds||[])[i]); if(na && na.trim()) nomes.add(na.trim()); });
     (v.carros||[]).forEach(carro => {
-      (carro.passageiros||[]).forEach(n => { if(n && n.trim()) nomes.add(n.trim()); });
+      (carro.passageiros||[]).forEach((n,i) => { const na = nomeAtualDoJovem(n,(carro.passageirosIds||[])[i]); if(na && na.trim()) nomes.add(na.trim()); });
     });
 
     // Unique ID for this viagem registration (prevents duplicates)
@@ -3421,17 +3432,17 @@
       const conf = v.convidados.filter(c=>c.confirmado&&c.nome);
       const pend = v.convidados.filter(c=>!c.confirmado&&c.nome);
       msg += `📋 CONVIDADOS\n`;
-      if (pend.length) { msg += `Aguardando:\n`; pend.forEach(c=>msg+=`• ${c.nome}\n`); }
-      if (conf.length) { msg += `Confirmados:\n`; conf.forEach(c=>msg+=`✅ ${c.nome}\n`); }
+      if (pend.length) { msg += `Aguardando:\n`; pend.forEach(c=>msg+=`• ${nomeAtualDoJovem(c.nome,c.jovemId)}\n`); }
+      if (conf.length) { msg += `Confirmados:\n`; conf.forEach(c=>msg+=`✅ ${nomeAtualDoJovem(c.nome,c.jovemId)}\n`); }
       msg += `\n`;
     }
     msg += `🚙 Meu carro (Eduardo):\n`;
-    const mcPass = (v.meuCarro?.passageiros||[]).filter(p=>p&&p.trim());
+    const mcPass = (v.meuCarro?.passageiros||[]).map((p,i)=>nomeAtualDoJovem(p,(v.meuCarro.passageirosIds||[])[i])).filter(p=>p&&p.trim());
     if (mcPass.length) mcPass.forEach(p=>msg+=`- ${p}\n`); else msg += `(sem passageiros)\n`;
     msg += `\n`;
     (v.carros||[]).forEach(c => {
-      msg += `🚗 ${c.motorista}:\n`;
-      const pass = (c.passageiros||[]).filter(p=>p&&p.trim());
+      msg += `🚗 ${nomeAtualDoJovem(c.motorista,c.motoristaId)}:\n`;
+      const pass = (c.passageiros||[]).map((p,i)=>nomeAtualDoJovem(p,(c.passageirosIds||[])[i])).filter(p=>p&&p.trim());
       if (pass.length) pass.forEach(p=>msg+=`- ${p}\n`); else msg += `(sem passageiros)\n`;
       msg += `\n`;
     });
@@ -6709,9 +6720,9 @@
       el.innerHTML = `<span style="font-size:12px;color:var(--muted);padding:4px 0">Nenhum adicionado ainda</span>`;
       return;
     }
-    el.innerHTML = encPresentes.map(n =>
+    el.innerHTML = encPresentes.map((n,i) =>
       `<span style="display:inline-flex;align-items:center;gap:4px;background:var(--accent);color:white;border-radius:100px;padding:4px 10px;font-size:12px;font-weight:500">
-        ${n}
+        ${nomeAtualDoJovem(n, encPresentesIds[i])}
         <span onclick="removeEncPresente('${n.replace(/'/g,"\\'")}')" style="cursor:pointer;opacity:0.8;font-size:14px;line-height:1">×</span>
       </span>`
     ).join('');
