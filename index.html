@@ -2722,21 +2722,17 @@
   }
 
   function acIrmao(q) {
-    const box = document.getElementById('ac-irmao');
-    if (!box || perfilIdx === null) return;
+    if (perfilIdx === null) return;
     const j = db.jovens[perfilIdx];
-    const jaLigados = j.irmaosIds || [];
-    const qq = (q || '').trim().toLowerCase();
-    const matches = db.jovens
-      .filter(x => x.id !== j.id && !jaLigados.includes(x.id) && x.name.toLowerCase().includes(qq))
-      .slice(0, 8);
-    if (!matches.length) { box.style.display = 'none'; return; }
-    box.innerHTML = matches.map(x => `
-      <div class="ac-item" onmousedown="addIrmao('${x.id}')" style="padding:10px 12px;border-bottom:1px solid var(--border)">
-        <div style="font-size:14px;font-weight:500">${x.name}</div>
-        <div style="font-size:11px;color:var(--muted)">${x.cat||''}</div>
-      </div>`).join('');
-    box.style.display = 'block';
+    acJovemPicker(q, {
+      boxId: 'ac-irmao',
+      onlyAtivos: false,
+      excluirSelfId: j.id,
+      excluir: j.irmaosIds || [],
+      excluirPor: 'id',
+      style: 'compacta',
+      onSelect: (x) => addIrmao(x.id)
+    });
   }
 
   function addIrmao(idAlvo) {
@@ -3171,7 +3167,7 @@
         item.addEventListener('click', () => {
           inp.value = j.name;
           drop.style.display = 'none';
-          onSave(inp);
+          onSave(inp, j.id);
         });
         drop.appendChild(item);
       });
@@ -3219,9 +3215,11 @@
         inp.placeholder = `Passageiro ${i+1}`;
         inp.value = (v.meuCarro.passageiros||[])[i] || '';
         const _i = i;
-        const onSave = (el) => {
+        const onSave = (el, jovemId) => {
           if (!v.meuCarro.passageiros) v.meuCarro.passageiros = [];
+          if (!v.meuCarro.passageirosIds) v.meuCarro.passageirosIds = [];
           v.meuCarro.passageiros[_i] = el.value;
+          v.meuCarro.passageirosIds[_i] = jovemId || null;
           saveDB();
         };
         inp.oninput = () => onSave(inp);
@@ -3259,9 +3257,11 @@
         inp.value = (carro.passageiros||[])[i] || '';
         const _i = i;
         const _carro = carro;
-        const onSavePosti = (el) => {
+        const onSavePosti = (el, jovemId) => {
           if (!_carro.passageiros) _carro.passageiros = [];
+          if (!_carro.passageirosIds) _carro.passageirosIds = [];
           _carro.passageiros[_i] = el.value;
+          _carro.passageirosIds[_i] = jovemId || null;
           saveDB();
         };
         inp.oninput = () => onSavePosti(inp);
@@ -3287,6 +3287,7 @@
   }
 
   function openMotoristaModal() {
+    _motoristaPickedId = null;
     document.getElementById('mot-search').value = '';
     document.getElementById('mot-outro').value = '';
     document.getElementById('mot-lugares').value = '5';
@@ -3296,47 +3297,22 @@
   }
 
   function acMotorista(val) {
-    const box = document.getElementById('ac-motorista');
-    const empty = document.getElementById('mot-empty');
-    if (!box) return;
-    const q = val.trim().toLowerCase();
-    const jovens = (db.jovens||[]).filter(j => j.ativo !== false);
-    const matches = jovens.filter(j => !q || j.name.toLowerCase().includes(q)).slice(0, 8);
-    box.innerHTML = '';
-    if (!matches.length) {
-      box.style.display = 'none';
-      if (empty) { empty.style.display='block'; empty.textContent = q ? 'Nenhum resultado para "'+q+'"' : 'Começa a escrever para buscar...'; }
-      return;
-    }
-    if (empty) empty.style.display = 'none';
-
-    let _picking = false;
-    const inp = document.getElementById('mot-search');
-
-    // Remove blur listener each time we rebuild, re-add below
-    if (inp._motBlur) inp.removeEventListener('blur', inp._motBlur);
-    inp._motBlur = () => { if (!_picking) box.style.display = 'none'; };
-    inp.addEventListener('blur', inp._motBlur);
-
-    matches.forEach(j => {
-      const item = document.createElement('div');
-      item.className = 'ac-item';
-      item.style.cssText = 'padding:12px 4px;border-bottom:1px solid var(--border)';
-      item.innerHTML = `<div style="font-size:15px;font-weight:500">${j.name}</div><div style="font-size:12px;color:var(--muted)">${j.cat||''}</div>`;
-
-      const pick = (e) => {
-        e.preventDefault();
-        _picking = true;
-        inp.value = j.name;
-        box.style.display = 'none';
+    _motoristaPickedId = null;
+    acJovemPicker(val, {
+      boxId: 'ac-motorista',
+      emptyId: 'mot-empty',
+      inputId: 'mot-search',
+      style: 'card',
+      useTouchFix: true,
+      onSelect: (j) => {
+        const inp = document.getElementById('mot-search');
+        if (inp) inp.value = j.name;
+        _motoristaPickedId = j.id;
+        document.getElementById('ac-motorista').style.display = 'none';
+        const empty = document.getElementById('mot-empty');
         if (empty) empty.style.display = 'none';
-        setTimeout(() => { _picking = false; }, 300);
-      };
-      item.addEventListener('mousedown', pick);
-      item.addEventListener('touchstart', pick, { passive: false });
-      box.appendChild(item);
+      }
     });
-    box.style.display = 'block';
   }
 
   function saveMotorista() {
@@ -3347,7 +3323,8 @@
     const lugares = parseInt(document.getElementById('mot-lugares').value) || 5;
     if (lugares < 2) { chzAlert('Mínimo 2 lugares.'); return; }
     if (!db.viagens[currentViagemIdx].carros) db.viagens[currentViagemIdx].carros = [];
-    db.viagens[currentViagemIdx].carros.push({id:'carro_'+Date.now(), motorista, lugares, passageiros:[]});
+    const motoristaId = search ? _motoristaPickedId : null;
+    db.viagens[currentViagemIdx].carros.push({id:'carro_'+Date.now(), motorista, motoristaId, lugares, passageiros:[], passageirosIds:[]});
     saveDB(); renderCarros();
     closeModal('modal-motorista');
   }
@@ -3508,6 +3485,70 @@
     }
   }
 
+  // ══════════════════════════════════════════
+  // AUTOCOMPLETE DE JOVEM — função única, reaproveitada por:
+  // acPessoa (convidados/passageiros), acMotorista (motorista do carro),
+  // acEncontro (presentes num encontro), acIrmao (ligação de irmãos).
+  // Cada uma só passa a sua configuração — a lógica de busca/desenho é uma só.
+  // ══════════════════════════════════════════
+  function acJovemPicker(query, opts) {
+    const box = document.getElementById(opts.boxId);
+    if (!box) return;
+    const empty = opts.emptyId ? document.getElementById(opts.emptyId) : null;
+    const q = (query || '').trim().toLowerCase();
+
+    let jovens = db.jovens || [];
+    if (opts.onlyAtivos !== false) jovens = jovens.filter(j => j.ativo !== false);
+    if (opts.excluirSelfId) jovens = jovens.filter(j => j.id !== opts.excluirSelfId);
+
+    const excluidos = opts.excluir || [];
+    const chave = opts.excluirPor || 'name';
+    let matches = jovens.filter(j => !q || j.name.toLowerCase().includes(q));
+    if (!opts.dimInsteadOfHide) matches = matches.filter(j => !excluidos.includes(j[chave]));
+    matches = matches.slice(0, 8);
+
+    box.innerHTML = '';
+    if (!matches.length) {
+      box.style.display = 'none';
+      if (empty) { empty.style.display = 'block'; empty.textContent = q ? `Nenhum resultado para "${q}"` : 'Começa a escrever para buscar...'; }
+      return;
+    }
+    if (empty) empty.style.display = 'none';
+
+    let _picking = false;
+    const inp = opts.inputId ? document.getElementById(opts.inputId) : null;
+    if (opts.useTouchFix && inp) {
+      if (inp._acBlur) inp.removeEventListener('blur', inp._acBlur);
+      inp._acBlur = () => { if (!_picking) box.style.display = 'none'; };
+      inp.addEventListener('blur', inp._acBlur);
+    }
+
+    matches.forEach(j => {
+      const dimmed = !!(opts.dimInsteadOfHide && excluidos.includes(j[chave]));
+      const item = document.createElement('div');
+      item.className = 'ac-item';
+      if (opts.style === 'simples') {
+        item.style.cssText = 'padding:10px 14px;font-size:14px;border-bottom:1px solid var(--border)';
+        item.textContent = j.name;
+      } else {
+        const compacta = opts.style === 'compacta';
+        item.style.cssText = (dimmed ? 'opacity:0.5;' : '') + `padding:${compacta ? '10px 12px' : '12px 4px'};border-bottom:1px solid var(--border)`;
+        item.innerHTML = `<div style="font-size:${compacta ? '14px' : '15px'};font-weight:500">${j.name}${dimmed && opts.dimLabel ? ` <span style="font-size:11px;color:var(--muted)">${opts.dimLabel}</span>` : ''}</div>
+          <div style="font-size:${compacta ? '11px' : '12px'};color:var(--muted)">${j.cat||''}</div>`;
+      }
+      const pick = (e) => {
+        e.preventDefault();
+        _picking = true;
+        opts.onSelect(j, dimmed);
+        setTimeout(() => { _picking = false; }, 300);
+      };
+      item.addEventListener('mousedown', pick);
+      if (opts.useTouchFix) item.addEventListener('touchstart', pick, { passive: false });
+      box.appendChild(item);
+    });
+    box.style.display = 'block';
+  }
+
   // ── AUTOCOMPLETE HELPERS ──
   function hideAc(id) {
     const el = document.getElementById(id);
@@ -3561,38 +3602,32 @@
   }
 
   function acPessoa(val) {
-    const box = document.getElementById('ac-pessoa');
-    const empty = document.getElementById('pessoa-empty');
-    if (!box) return;
-    const q = val.trim().toLowerCase();
-    if (currentViagemIdx === null) { box.style.display='none'; if(empty) empty.style.display='block'; return; }
-    const v = db.viagens[currentViagemIdx];
-    const existingNames = (v.convidados||[]).map(c=>c.nome);
-    const jovens = db.jovens.filter(j => j.ativo !== false);
-    const matches = jovens.filter(j => !q || j.name.toLowerCase().includes(q)).slice(0, 8);
-    if (!matches.length) {
-      box.style.display = 'none';
-      if (empty) { empty.style.display='block'; empty.textContent = q ? 'Nenhum resultado para "'+q+'"' : 'Começa a escrever para buscar...'; }
+    if (currentViagemIdx === null) {
+      const box = document.getElementById('ac-pessoa');
+      const empty = document.getElementById('pessoa-empty');
+      if (box) box.style.display = 'none';
+      if (empty) empty.style.display = 'block';
       return;
     }
-    if (empty) empty.style.display = 'none';
-    box.innerHTML = matches.map(j => {
-      const alreadyInv = existingNames.includes(j.name);
-      return `<div class="ac-item" onmousedown="selectPessoa('${j.name.replace(/'/g,"\'")}', ${alreadyInv})"
-        style="${alreadyInv ? 'opacity:0.5;' : ''}padding:12px 4px;border-bottom:1px solid var(--border)">
-        <div style="font-size:15px;font-weight:500">${j.name}${alreadyInv ? ' <span style="font-size:11px;color:var(--muted)">(já convidado)</span>' : ''}</div>
-        <div style="font-size:12px;color:var(--muted)">${j.cat||''}</div>
-      </div>`;
-    }).join('');
-    box.style.display = 'block';
+    const v = db.viagens[currentViagemIdx];
+    acJovemPicker(val, {
+      boxId: 'ac-pessoa',
+      emptyId: 'pessoa-empty',
+      excluir: (v.convidados||[]).map(c=>c.nome),
+      excluirPor: 'name',
+      dimInsteadOfHide: true,
+      dimLabel: '(já convidado)',
+      style: 'card',
+      onSelect: (j, dimmed) => selectPessoa(j.name, dimmed, j.id)
+    });
   }
 
-  function selectPessoa(nome, alreadyInv) {
+  function selectPessoa(nome, alreadyInv, jovemId) {
     if (!pessoaCtx || currentViagemIdx === null) return;
     const v = db.viagens[currentViagemIdx];
     if (pessoaCtx.type === 'convidado') {
       if (!alreadyInv) {
-        v.convidados.push({ id:'inv_'+Date.now(), nome, confirmado: false });
+        v.convidados.push({ id:'inv_'+Date.now(), nome, confirmado: false, jovemId: jovemId || null });
         saveDB(); renderConvidados();
       }
     } else {
@@ -3601,18 +3636,20 @@
       if (ci === null) {
         // meu carro — find first empty slot
         if (!v.meuCarro.passageiros) v.meuCarro.passageiros = [];
+        if (!v.meuCarro.passageirosIds) v.meuCarro.passageirosIds = [];
         const maxP = (v.meuCarro.lugares||6) - 1;
         const emptySlot = v.meuCarro.passageiros.findIndex((p,i) => i < maxP && !p);
         const idx = emptySlot >= 0 ? emptySlot : v.meuCarro.passageiros.length;
-        if (idx < maxP) { v.meuCarro.passageiros[idx] = nome; saveDB(); renderCarros(); }
+        if (idx < maxP) { v.meuCarro.passageiros[idx] = nome; v.meuCarro.passageirosIds[idx] = jovemId || null; saveDB(); renderCarros(); }
         else { chzAlert('Meu carro está cheio!'); }
       } else {
         const carro = v.carros[ci];
         if (!carro.passageiros) carro.passageiros = [];
+        if (!carro.passageirosIds) carro.passageirosIds = [];
         const maxP = carro.lugares - 1;
         const emptySlot = carro.passageiros.findIndex((p,i) => i < maxP && !p);
         const idx = emptySlot >= 0 ? emptySlot : carro.passageiros.length;
-        if (idx < maxP) { carro.passageiros[idx] = nome; saveDB(); renderCarros(); }
+        if (idx < maxP) { carro.passageiros[idx] = nome; carro.passageirosIds[idx] = jovemId || null; saveDB(); renderCarros(); }
         else { chzAlert('Este carro está cheio!'); }
       }
     }
@@ -3626,17 +3663,21 @@
     if (!nome || currentViagemIdx === null) return;
     const v = db.viagens[currentViagemIdx];
     if (pessoaCtx?.type === 'convidado') {
-      v.convidados.push({ id:'inv_'+Date.now(), nome, confirmado: false });
+      v.convidados.push({ id:'inv_'+Date.now(), nome, confirmado: false, jovemId: null });
       saveDB(); renderConvidados();
     } else {
       const ci = pessoaCtx?.carroIdx;
       if (ci === null) {
         if (!v.meuCarro.passageiros) v.meuCarro.passageiros = [];
+        if (!v.meuCarro.passageirosIds) v.meuCarro.passageirosIds = [];
         v.meuCarro.passageiros.push(nome);
+        v.meuCarro.passageirosIds.push(null);
         saveDB(); renderCarros();
       } else {
         if (!v.carros[ci].passageiros) v.carros[ci].passageiros = [];
+        if (!v.carros[ci].passageirosIds) v.carros[ci].passageirosIds = [];
         v.carros[ci].passageiros.push(nome);
+        v.carros[ci].passageirosIds.push(null);
         saveDB(); renderCarros();
       }
     }
@@ -4718,6 +4759,51 @@
   }
 
   // ── AGENDA LIST ──
+
+  // ══════════════════════════════════════════
+  // A3 — ETAPA 3: migração silenciosa de registos antigos para ID
+  // Só liga o ID quando o nome bate, de forma inequívoca, com UM único jovem
+  // atual. Casos ambíguos ou sem correspondência ficam como estavam — nada
+  // é forçado nem apagado.
+  // ══════════════════════════════════════════
+  function resolverJovemIdExato(nome) {
+    if (!nome) return null;
+    const candidatos = (db.jovens || []).filter(j => j.name === nome);
+    return candidatos.length === 1 ? candidatos[0].id : null;
+  }
+
+  function migrarViagensEncontrosParaId() {
+    let changed = false;
+    (db.viagens || []).forEach(v => {
+      (v.convidados || []).forEach(c => {
+        if (!c.jovemId) {
+          const id = resolverJovemIdExato(c.nome);
+          if (id) { c.jovemId = id; changed = true; }
+        }
+      });
+      (v.carros || []).forEach(carro => {
+        if (!carro.motoristaId) {
+          const id = resolverJovemIdExato(carro.motorista);
+          if (id) { carro.motoristaId = id; changed = true; }
+        }
+        if (!carro.passageirosIds || carro.passageirosIds.length !== (carro.passageiros || []).length) {
+          carro.passageirosIds = (carro.passageiros || []).map(nome => resolverJovemIdExato(nome));
+          changed = true;
+        }
+      });
+      if (v.meuCarro && (!v.meuCarro.passageirosIds || v.meuCarro.passageirosIds.length !== (v.meuCarro.passageiros || []).length)) {
+        v.meuCarro.passageirosIds = (v.meuCarro.passageiros || []).map(nome => resolverJovemIdExato(nome));
+        changed = true;
+      }
+    });
+    (db.encontros || []).forEach(enc => {
+      if (!enc.presentesIds || enc.presentesIds.length !== (enc.presentes || []).length) {
+        enc.presentesIds = (enc.presentes || []).map(nome => resolverJovemIdExato(nome));
+        changed = true;
+      }
+    });
+    if (changed) saveDB();
+  }
 
   function initEventos() {
     if (!db.eventos) db.eventos = [];
@@ -6503,6 +6589,8 @@
 
   // ── ENCONTROS ──
   let encPresentes = []; // array of names during editing
+  let encPresentesIds = []; // A3 — array irmão de encPresentes: id do jovem (ou null se nome externo)
+  let _motoristaPickedId = null; // A3 — id do jovem escolhido como motorista (null se digitado à mão)
 
   let encEditIdx = null;
 
@@ -6510,6 +6598,8 @@
     encEditIdx = idx;
     const enc = db.encontros[idx];
     encPresentes = [...(enc.presentes || [])];
+    encPresentesIds = (enc.presentesIds && enc.presentesIds.length === encPresentes.length)
+      ? [...enc.presentesIds] : encPresentes.map(() => null);
     document.getElementById('enc-nome').value = enc.nome || '';
     document.getElementById('enc-data').value = enc.data || new Date().toISOString().slice(0,10);
     document.getElementById('enc-notas').value = enc.notas || '';
@@ -6547,6 +6637,7 @@
     enc.data = newData;
     enc.notas = notas;
     enc.presentes = [...encPresentes];
+    enc.presentesIds = [...encPresentesIds];
 
     // Re-register interactions for new presentes list
     encPresentes.forEach(pName => {
@@ -6569,6 +6660,7 @@
 
   function openNovoEncontro() {
     encPresentes = [];
+    encPresentesIds = [];
     encEditIdx = null;
     document.getElementById('enc-nome').value = '';
     document.getElementById('enc-data').value = new Date().toISOString().slice(0,10);
@@ -6582,30 +6674,31 @@
   }
 
   function acEncontro(q) {
-    const box = document.getElementById('ac-enc-pessoa');
-    if (!box) return;
-    const qq = (q || '').toLowerCase().trim();
-    const matches = (db.jovens || [])
-      .filter(j => j.ativo !== false && j.name.toLowerCase().includes(qq) && !encPresentes.includes(j.name))
-      .slice(0, 8);
-    if (!matches.length) { box.style.display = 'none'; return; }
-    box.style.display = 'block';
-    box.innerHTML = matches.map(j =>
-      `<div onclick="addEncPresente('${j.name.replace(/'/g,"\\'")}');document.getElementById('enc-pessoa-search').value='';document.getElementById('ac-enc-pessoa').style.display='none'"
-        style="padding:10px 14px;cursor:pointer;font-size:14px;border-bottom:1px solid var(--border)"
-        onmousedown="event.preventDefault()">${j.name}</div>`
-    ).join('');
+    acJovemPicker(q, {
+      boxId: 'ac-enc-pessoa',
+      excluir: encPresentes,
+      excluirPor: 'name',
+      style: 'simples',
+      onSelect: (j) => {
+        addEncPresente(j.name, j.id);
+        document.getElementById('enc-pessoa-search').value = '';
+        document.getElementById('ac-enc-pessoa').style.display = 'none';
+      }
+    });
   }
 
-  function addEncPresente(name) {
+  function addEncPresente(name, jovemId) {
     if (!encPresentes.includes(name)) {
       encPresentes.push(name);
+      encPresentesIds.push(jovemId || null);
       renderEncPresentes();
     }
   }
 
   function removeEncPresente(name) {
+    const idx = encPresentes.indexOf(name);
     encPresentes = encPresentes.filter(n => n !== name);
+    if (idx >= 0) encPresentesIds.splice(idx, 1);
     renderEncPresentes();
   }
 
@@ -6631,7 +6724,7 @@
     const notas = document.getElementById('enc-notas').value.trim();
     // Save encontro
     if (!db.encontros) db.encontros = [];
-    db.encontros.unshift({ nome, data, notas, presentes: [...encPresentes], criado: Date.now() });
+    db.encontros.unshift({ nome, data, notas, presentes: [...encPresentes], presentesIds: [...encPresentesIds], criado: Date.now() });
     // Register interaction on each present jovem
     const dataFormatted = data.split('-').reverse().join('/'); // dd/mm/yyyy
     encPresentes.forEach(pName => {
@@ -6726,6 +6819,7 @@
     loadDB();
     initLuoghi();
     initJovens();
+    migrarViagensEncontrosParaId();
     initEventos();
     setHeaderDate();
     renderCalendar();
