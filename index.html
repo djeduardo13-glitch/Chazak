@@ -1100,7 +1100,7 @@
         <div class="card" style="display:flex;flex-direction:column;gap:8px">
           <div style="display:flex;justify-content:space-between;align-items:center">
             <span style="font-size:13px;color:var(--muted)">Versão</span>
-            <span style="font-size:13px;font-weight:500">5.6.1</span>
+            <span style="font-size:13px;font-weight:500">5.6.0</span>
           </div>
           <div style="display:flex;justify-content:space-between;align-items:center">
             <span style="font-size:13px;color:var(--muted)">Jovens ativos</span>
@@ -1524,10 +1524,37 @@
     </div>
     <div class="form-field">
       <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px;font-weight:500">
-        <input type="checkbox" id="ej-ativo" style="width:18px;height:18px;accent-color:var(--accent);cursor:pointer">
+        <input type="checkbox" id="ej-ativo" style="width:18px;height:18px;accent-color:var(--accent);cursor:pointer" onchange="toggleMotivoInativo()">
         <span>Na Mocidade</span>
       </label>
       <div style="font-size:11px;color:var(--muted);margin-top:4px;margin-left:28px">Desmarcado → sai do tracker mas permanece no banco de dados e nos aniversários</div>
+    </div>
+    <div id="ej-motivo-wrap" class="form-field" style="display:none;background:var(--bg);border-radius:var(--radius);padding:12px">
+      <label class="form-label">Motivo</label>
+      <select class="form-input" id="ej-motivo" onchange="toggleMotivoCampos()">
+        <option value="generico">Inativo</option>
+        <option value="casamento">💍 Casamento</option>
+        <option value="mudanca">📦 Mudança</option>
+      </select>
+
+      <div id="ej-motivo-casamento" style="display:none;margin-top:10px">
+        <label class="form-label">Cônjuge</label>
+        <div style="position:relative;margin-bottom:8px">
+          <input class="form-input" type="text" id="ej-conjuge-search" placeholder="Buscar jovem da mocidade..." autocomplete="off"
+            oninput="acConjuge(this.value)" onfocus="acConjuge(this.value)"
+            onblur="setTimeout(()=>{const d=document.getElementById('ac-conjuge');if(d)d.style.display='none'},200)"
+            style="font-size:14px">
+          <div id="ac-conjuge" style="display:none;position:absolute;z-index:200;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);width:100%;max-height:180px;overflow-y:auto;box-shadow:0 4px 16px rgba(0,0,0,0.1)"></div>
+        </div>
+        <input class="form-input" type="text" id="ej-conjuge-outro" placeholder="ou nome de fora da mocidade..." style="margin-bottom:8px;font-size:14px">
+        <label class="form-label">Data do casamento</label>
+        <input class="form-input" type="text" id="ej-data-casamento" placeholder="ex: 12/06/2026" oninput="formatDateSimples(this)" maxlength="10">
+      </div>
+
+      <div id="ej-motivo-mudanca" style="display:none;margin-top:10px">
+        <label class="form-label">Cidade ou país</label>
+        <input class="form-input" type="text" id="ej-mudanca-local" placeholder="ex: Lisboa, Portugal">
+      </div>
     </div>
     <div class="form-field">
       <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px;font-weight:500">
@@ -2677,7 +2704,18 @@
     const container = document.getElementById('perfil-info-rows');
     if (!container) return;
     const linhas = [];
-    if (j.ativo === false) linhas.push({ label: '🚫 Estado', value: `<span style="background:#fbddd5;color:#c0392b;border-radius:100px;padding:3px 10px;font-size:11px;font-weight:600">Inativo</span>` });
+    if (j.ativo === false) {
+      let estadoIcone = '🚫', estadoTexto = 'Inativo';
+      if (j.motivoInativo === 'casamento') {
+        estadoIcone = '💍';
+        const nomeConjuge = j.conjugeNome ? nomeAtualDoJovem(j.conjugeNome, j.conjugeId) : '';
+        estadoTexto = 'Casou-se' + (nomeConjuge ? ` com ${nomeConjuge}` : '') + (j.dataCasamento ? ` em ${j.dataCasamento}` : '');
+      } else if (j.motivoInativo === 'mudanca') {
+        estadoIcone = '📦';
+        estadoTexto = 'Mudou-se' + (j.mudancaLocal ? ` para ${j.mudancaLocal}` : '');
+      }
+      linhas.push({ label: `${estadoIcone} Estado`, value: `<span style="background:#fbddd5;color:#c0392b;border-radius:100px;padding:3px 10px;font-size:11px;font-weight:600">${estadoTexto}</span>` });
+    }
     if (j.auxiliar) linhas.push({ label: '🖋️ Auxiliar', value: 'Sim' });
     const grupo = getGrupoAuto(j);
     if (grupo) linhas.push({ label: (j.genero === 'M' ? '♂️' : '♀️') + ' Categoria', value: grupo });
@@ -2879,6 +2917,19 @@
     document.getElementById('ej-ativo').checked = j.ativo !== false;
     document.getElementById('ej-excluir-ranking').checked = !!j.excluirRankingPresenca;
     document.getElementById('ej-auxiliar').checked = !!j.auxiliar;
+    // Motivo de inatividade
+    _conjugePickedId = null;
+    document.getElementById('ej-motivo').value = j.motivoInativo || 'generico';
+    document.getElementById('ej-conjuge-search').value = '';
+    document.getElementById('ej-conjuge-outro').value = '';
+    document.getElementById('ej-data-casamento').value = j.dataCasamento || '';
+    document.getElementById('ej-mudanca-local').value = j.mudancaLocal || '';
+    if (j.motivoInativo === 'casamento' && j.conjugeNome) {
+      if (j.conjugeId) { document.getElementById('ej-conjuge-search').value = nomeAtualDoJovem(j.conjugeNome, j.conjugeId); _conjugePickedId = j.conjugeId; }
+      else { document.getElementById('ej-conjuge-outro').value = j.conjugeNome; }
+    }
+    toggleMotivoInativo();
+    toggleMotivoCampos();
     // Load genero
     _ejGenero = j.genero || (
       ['Jovem Moço','Criança Menino','Menino menor de 6','Menor de 5 anos'].includes(j.cat) ||
@@ -2901,6 +2952,34 @@
     j.ativo = document.getElementById('ej-ativo').checked;
     j.excluirRankingPresenca = document.getElementById('ej-excluir-ranking').checked;
     j.auxiliar = document.getElementById('ej-auxiliar').checked;
+    if (!j.ativo) {
+      const motivo = document.getElementById('ej-motivo').value;
+      j.motivoInativo = motivo;
+      if (motivo === 'casamento') {
+        const conjugeSearch = document.getElementById('ej-conjuge-search').value.trim();
+        const conjugeOutro = document.getElementById('ej-conjuge-outro').value.trim();
+        const dataCasamento = document.getElementById('ej-data-casamento').value.trim();
+        j.dataCasamento = dataCasamento;
+        if (conjugeSearch && _conjugePickedId) {
+          j.conjugeId = _conjugePickedId;
+          j.conjugeNome = conjugeSearch;
+          // O cônjuge, se for jovem da mocidade, é desativado também — mesmo motivo e mesma data
+          const conjuge = getJovemById(_conjugePickedId);
+          if (conjuge) {
+            conjuge.ativo = false;
+            conjuge.motivoInativo = 'casamento';
+            conjuge.conjugeId = j.id;
+            conjuge.conjugeNome = j.name;
+            conjuge.dataCasamento = dataCasamento;
+          }
+        } else {
+          j.conjugeId = null;
+          j.conjugeNome = conjugeOutro || conjugeSearch || '';
+        }
+      } else if (motivo === 'mudanca') {
+        j.mudancaLocal = document.getElementById('ej-mudanca-local').value.trim();
+      }
+    }
     // Se o nome mudou, sincronizar chaves nos registos de presença histórica
     if (oldName !== j.name && (db.presencas||[]).length) {
       db.presencas.forEach(s => {
@@ -3459,7 +3538,11 @@
       const curTab = document.getElementById('biblia-curiosidades');
       const favTab = document.getElementById('biblia-favoritos');
       const oeeTab = document.getElementById('biblia-ondeescrito');
-      if (livrosTab && livrosTab.style.display !== 'none') { openNovoLivro(); return; }
+      if (livrosTab && livrosTab.style.display !== 'none') {
+        if (livroAtualIdx !== null) return; // já dentro de um livro — usa os botões próprios de Cap./Termo/Vers. ali mesmo
+        openNovoLivro();
+        return;
+      }
       if (curTab && curTab.style.display !== 'none') { openNovaCuriosidade(); return; }
       if (favTab && favTab.style.display !== 'none') { openNovoFavorito(); return; }
       if (oeeTab && oeeTab.style.display !== 'none') {
@@ -3709,7 +3792,12 @@
   }
 
   // ── MODAL CONTROLS ──
-  function openModal(id) { document.getElementById(id).classList.add('show'); }
+  function openModal(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    document.body.appendChild(el); // garante que este modal fica sempre por cima de qualquer outro já aberto
+    el.classList.add('show');
+  }
   function closeModal(id) { document.getElementById(id).classList.remove('show'); }
   // Use delegation so modals added after script also work
   document.addEventListener('click', e => {
@@ -3719,6 +3807,35 @@
   // ── GENDER SELECTOR HELPERS ──
   let _njGenero = null;
   let _ejGenero = null;
+  let _conjugePickedId = null; // id do jovem escolhido como cônjuge (null se digitado à mão / sem escolha)
+
+  function toggleMotivoInativo() {
+    const ativo = document.getElementById('ej-ativo').checked;
+    document.getElementById('ej-motivo-wrap').style.display = ativo ? 'none' : 'block';
+  }
+
+  function toggleMotivoCampos() {
+    const motivo = document.getElementById('ej-motivo').value;
+    document.getElementById('ej-motivo-casamento').style.display = motivo === 'casamento' ? 'block' : 'none';
+    document.getElementById('ej-motivo-mudanca').style.display = motivo === 'mudanca' ? 'block' : 'none';
+  }
+
+  function acConjuge(q) {
+    if (perfilIdx === null) return;
+    const j = db.jovens[perfilIdx];
+    _conjugePickedId = null;
+    acJovemPicker(q, {
+      boxId: 'ac-conjuge',
+      excluirSelfId: j.id,
+      style: 'compacta',
+      onSelect: (x) => {
+        const inp = document.getElementById('ej-conjuge-search');
+        if (inp) inp.value = x.name;
+        _conjugePickedId = x.id;
+        document.getElementById('ac-conjuge').style.display = 'none';
+      }
+    });
+  }
 
   function selectGenero(g) {
     _njGenero = g;
@@ -4451,7 +4568,7 @@
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     const today = new Date().toISOString().slice(0,10).replace(/-/g,'_');
-    a.download = `Chazak_backup_${today}_(v5.6.1).json`;
+    a.download = `Chazak_backup_${today}_(v5.6.0).json`;
     a.click();
   }
 
@@ -6770,6 +6887,32 @@
     renderTracker();
   }
 
+  function openVerEncontro(idx) {
+    const enc = db.encontros[idx];
+    if (!enc) return;
+    const [y,m,d] = enc.data.split('-');
+    const dateStr = `${d}/${m}/${y}`;
+    const presentes = (enc.presentes || []);
+    const presentesIds = enc.presentesIds || [];
+    const chips = presentes.length
+      ? presentes.map((n,i) => `<span style="background:var(--bg);border:1px solid var(--border);border-radius:100px;padding:4px 10px;font-size:12px">${nomeAtualDoJovem(n, presentesIds[i])}</span>`).join('')
+      : `<span style="font-size:13px;color:var(--muted)">Nenhum presente registado.</span>`;
+    document.getElementById('ver-nota-conteudo').innerHTML = `
+      <div style="margin-bottom:16px">
+        <div style="font-size:11px;font-weight:600;color:var(--accent3);text-transform:uppercase;margin-bottom:6px">🎉 Encontro</div>
+        <div style="font-size:20px;font-weight:700;margin-bottom:6px">${enc.nome}</div>
+        <div style="font-size:13px;color:var(--muted);margin-bottom:14px">📅 ${dateStr}</div>
+        ${enc.notas ? `<div style="font-size:13px;color:var(--muted);font-style:italic;margin-bottom:14px;border-top:1px solid var(--border);padding-top:12px">${enc.notas}</div>` : ''}
+        <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:8px">👥 Presentes (${presentes.length})</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">${chips}</div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:16px">
+        <button onclick="closeModal('modal-ver-nota');openEditEncontro(${idx})" style="flex:1;padding:10px;border-radius:10px;border:1px solid var(--border);background:var(--surface);font-size:13px;cursor:pointer">✏️ Editar</button>
+        <button onclick="closeModal('modal-ver-nota')" style="flex:1;padding:10px;border-radius:10px;border:none;background:var(--accent3);color:white;font-size:13px;cursor:pointer">Fechar</button>
+      </div>`;
+    openModal('modal-ver-nota');
+  }
+
   function renderEncontros() {
     const container = document.getElementById('encontros-list');
     if (!container) return;
@@ -6786,14 +6929,14 @@
       const [y,m,d] = enc.data.split('-');
       const dateStr = `${d}/${m}/${y}`;
       const presentes = (enc.presentes || []);
-      return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;gap:10px">
+      return `<div onclick="openVerEncontro(${i})" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;gap:10px;cursor:pointer">
         <div style="flex:1;min-width:0">
           <div style="font-weight:700;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${enc.nome}</div>
           <div style="font-size:12px;color:var(--muted);margin-top:3px">📅 ${dateStr} · 👥 ${presentes.length} presente${presentes.length !== 1 ? 's' : ''}${enc.notas ? ' · ' + enc.notas : ''}</div>
         </div>
         <div style="display:flex;gap:6px;flex-shrink:0">
-          <button onclick="openEditEncontro(${i})" style="background:none;border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:13px;cursor:pointer">✏️</button>
-          <button onclick="deleteEncontro(${i})" style="background:none;border:1px solid #fbddd5;border-radius:8px;padding:6px 10px;font-size:13px;cursor:pointer;color:#E07B54">🗑</button>
+          <button onclick="event.stopPropagation();openEditEncontro(${i})" style="background:none;border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:13px;cursor:pointer">✏️</button>
+          <button onclick="event.stopPropagation();deleteEncontro(${i})" style="background:none;border:1px solid #fbddd5;border-radius:8px;padding:6px 10px;font-size:13px;cursor:pointer;color:#E07B54">🗑</button>
         </div>
       </div>`;
     }).join('');
