@@ -104,6 +104,28 @@
       align-items: center;
       justify-content: center;
       font-size: 16px;
+      position: relative;
+      cursor: pointer;
+    }
+
+    .header-badge {
+      display: none;
+      position: absolute;
+      top: -5px;
+      right: -5px;
+      min-width: 16px;
+      height: 16px;
+      padding: 0 3px;
+      border-radius: 100px;
+      background: #E07B54;
+      border: 1.5px solid rgba(255,255,255,0.85);
+      color: white;
+      font-size: 10px;
+      font-weight: 700;
+      font-family: 'DM Sans', sans-serif;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
     }
 
     .header-title {
@@ -821,7 +843,7 @@
 
   <!-- HEADER -->
   <header>
-    <div class="header-icon">🌾</div>
+    <div class="header-icon" onclick="mostrarAniversariosHoje()">🌾<span class="header-badge" id="header-icon-badge"></span></div>
     <div style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0">
       <span style="font-size:10px;color:rgba(255,255,255,0.6);font-weight:500;letter-spacing:0.8px;text-transform:uppercase" id="header-date"></span>
       <span class="header-title">Eduardo R.</span>
@@ -1100,7 +1122,7 @@
         <div class="card" style="display:flex;flex-direction:column;gap:8px">
           <div style="display:flex;justify-content:space-between;align-items:center">
             <span style="font-size:13px;color:var(--muted)">Versão</span>
-            <span style="font-size:13px;font-weight:500">5.6.1</span>
+            <span style="font-size:13px;font-weight:500">5.6.2</span>
           </div>
           <div style="display:flex;justify-content:space-between;align-items:center">
             <span style="font-size:13px;color:var(--muted)">Jovens ativos</span>
@@ -4231,7 +4253,7 @@
   function saveDB() {
     localStorage.setItem('cooperador_db', JSON.stringify(db));
     // Only update stats if DOM is ready
-    if (document.readyState === 'complete' || document.readyState === 'interactive') updateStats();
+    if (document.readyState === 'complete' || document.readyState === 'interactive') { updateStats(); atualizarBadgeAniversarios(); }
   }
 
   function updateStats() {
@@ -4568,7 +4590,7 @@
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     const today = new Date().toISOString().slice(0,10).replace(/-/g,'_');
-    a.download = `Chazak_backup_${today}_(v5.6.1).json`;
+    a.download = `Chazak_backup_${today}_(v5.6.2).json`;
     a.click();
   }
 
@@ -4614,7 +4636,7 @@
     document.querySelectorAll('.inner-tab').forEach(t => t.classList.remove('active'));
     const leituraTab = document.querySelector('.inner-tab[onclick*="livros"]');
     if (leituraTab) leituraTab.classList.add('active');
-    ['livros','curiosidades','favoritos'].forEach(t => {
+    ['livros','curiosidades','favoritos','ondeescrito'].forEach(t => {
       const el = document.getElementById('biblia-' + t);
       if (el) el.style.display = t === 'livros' ? 'block' : 'none';
     });
@@ -5451,7 +5473,79 @@
     const timePart = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
     document.getElementById('header-date').textContent = datePart + ' · ' + timePart;
   }
-  setInterval(setHeaderDate, 60000);
+  setInterval(() => { setHeaderDate(); atualizarBadgeAniversarios(); }, 60000);
+
+  // ══════════════════════════════════════════
+  // NOTIFICAÇÃO LOCAL — bolinha no ícone do cabeçalho
+  // Por enquanto só aniversários (nascimento e batismo), hoje e amanhã.
+  // Puramente calculado a partir dos dados (sem permissões do browser,
+  // sem push) — recalcula sempre que os dados são guardados ou a app abre.
+  // ══════════════════════════════════════════
+  function getAniversariosProximos() {
+    const hoje = new Date(); hoje.setHours(0,0,0,0);
+    const amanha = new Date(hoje); amanha.setDate(hoje.getDate() + 1);
+    const hojeMM = hoje.getMonth() + 1, hojeDD = hoje.getDate();
+    const amanhaMM = amanha.getMonth() + 1, amanhaDD = amanha.getDate();
+    const CAMPOS = [
+      { campo: 'aniv',    icon: '🎂', label: 'Aniversário' },
+      { campo: 'batismo', icon: '💧', label: 'Aniversário de batismo' },
+    ];
+    const resultados = [];
+    (db.jovens || []).filter(j => j.ativo !== false).forEach(j => {
+      CAMPOS.forEach(({ campo, icon, label }) => {
+        const val = j[campo];
+        if (!val) return;
+        const parts = val.split('/');
+        if (parts.length < 2) return; // precisa pelo menos dd/mm
+        const dd = parseInt(parts[0], 10), mm = parseInt(parts[1], 10);
+        if (isNaN(dd) || isNaN(mm)) return;
+        if (mm === hojeMM && dd === hojeDD) resultados.push({ nome: j.name, icon, label, quando: 'hoje' });
+        else if (mm === amanhaMM && dd === amanhaDD) resultados.push({ nome: j.name, icon, label, quando: 'amanhã' });
+      });
+    });
+    return resultados;
+  }
+
+  function atualizarBadgeAniversarios() {
+    const badge = document.getElementById('header-icon-badge');
+    if (!badge) return;
+    const lista = getAniversariosProximos();
+    if (lista.length) {
+      badge.textContent = lista.length;
+      badge.style.display = 'flex';
+    } else {
+      badge.style.display = 'none';
+    }
+  }
+
+  function mostrarAniversariosHoje() {
+    const lista = getAniversariosProximos();
+    if (!lista.length) return;
+
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.35);z-index:9999;display:flex;align-items:flex-start;justify-content:center;padding-top:18vh';
+    overlay.onclick = () => overlay.remove();
+
+    const card = document.createElement('div');
+    card.style.cssText = 'background:var(--surface);border-radius:14px;padding:16px 18px;max-width:320px;width:85%;box-shadow:0 8px 24px rgba(0,0,0,0.25)';
+    card.onclick = (e) => e.stopPropagation();
+
+    const linhas = lista.map(l => `
+      <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border)">
+        <span style="font-size:20px">${l.icon}</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:14px;font-weight:600">${l.nome}</div>
+          <div style="font-size:11px;color:var(--muted)">${l.label} · ${l.quando === 'hoje' ? 'Hoje!' : 'Amanhã'}</div>
+        </div>
+      </div>`).join('');
+
+    card.innerHTML = `
+      <div style="font-size:13px;font-weight:700;color:var(--accent);margin-bottom:6px">🔔 Aniversários</div>
+      <div>${linhas}</div>
+      <button onclick="this.closest('div[style*=fixed]').remove()" style="margin-top:12px;width:100%;padding:9px;border-radius:8px;border:1px solid var(--border);background:none;color:var(--muted);font-size:12px;cursor:pointer">Fechar</button>`;
+    overlay.appendChild(card);
+    document.body.appendChild(overlay);
+  }
 
   // Show/hide FAB + agenda trigger
   const origSwitch = switchTab;
@@ -6470,11 +6564,11 @@
     };
     if (curEditIdx !== null) { obj.criado = db.curiosidades[curEditIdx].criado; db.curiosidades[curEditIdx]=obj; }
     else db.curiosidades.unshift(obj);
-    saveDB(); closeModal('modal-curiosidade'); renderCuriosidades();
+    saveDB(); closeModal('modal-curiosidade'); renderCuriosidades(); renderOndeEstaEscrito();
   }
 
   async function delCuriosidade(idx) {
-    if(await chzConfirm('Remover esta nota?', 'Remover')){db.curiosidades.splice(idx,1);saveDB();renderCuriosidades();}
+    if(await chzConfirm('Remover esta nota?', 'Remover')){db.curiosidades.splice(idx,1);saveDB();renderCuriosidades();renderOndeEstaEscrito();}
   }
 
   // ── FAVORITOS ──
@@ -6981,6 +7075,7 @@
     renderTracker();
     renderServicos();
     updateStats();
+    atualizarBadgeAniversarios();
     // Start on Agenda (home)
     switchTab('agenda');
   });
