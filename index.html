@@ -1122,7 +1122,7 @@
         <div class="card" style="display:flex;flex-direction:column;gap:8px">
           <div style="display:flex;justify-content:space-between;align-items:center">
             <span style="font-size:13px;color:var(--muted)">Versão</span>
-            <span style="font-size:13px;font-weight:500">5.6.2</span>
+            <span style="font-size:13px;font-weight:500">5.6.3</span>
           </div>
           <div style="display:flex;justify-content:space-between;align-items:center">
             <span style="font-size:13px;color:var(--muted)">Jovens ativos</span>
@@ -1710,6 +1710,19 @@
   let interCtx = null; // { jovemIdx, tipo }
 
   // ══════════════════════════════════════════
+  // SEGURANÇA DE TEXTO — todo o texto escrito pelo utilizador (ou vindo de
+  // um backup / da API) passa por aqui antes de entrar em innerHTML.
+  // esc()   → texto seguro dentro de HTML e de atributos value="..."
+  // escJs() → texto seguro dentro de 'aspas' num onclick="...('...')"
+  // ══════════════════════════════════════════
+  function esc(s) {
+    return String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+  }
+  function escJs(s) {
+    return esc(String(s ?? '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\r?\n/g, '\\n'));
+  }
+
+  // ══════════════════════════════════════════
   // DIÁLOGOS PERSONALIZADOS — substituem os alert/confirm nativos do navegador (D10)
   // Reutilizam o mesmo estilo visual dos outros modais da app.
   // ══════════════════════════════════════════
@@ -1865,7 +1878,7 @@
     const matches = (db.luoghi||[]).filter(l => !q || l.toLowerCase().includes(q));
     if (!matches.length) { box.style.display = 'none'; return; }
     box.innerHTML = matches.slice(0,7).map(l =>
-      `<div class="ac-item" onmousedown="selectLocal('${l.replace(/'/g,"\'")}','${dropId}')">${l}</div>`
+      `<div class="ac-item" onmousedown="selectLocal('${escJs(l)}','${dropId}')">${esc(l)}</div>`
     ).join('');
     box.style.display = 'block';
   }
@@ -1885,7 +1898,7 @@
     const sel = document.getElementById('sel-local-serv');
     if (sel) {
       const cur = sel.value;
-      const opts = (db.luoghi||[]).map(l => `<option value="${l}">${l}</option>`).join('');
+      const opts = (db.luoghi||[]).map(l => `<option value="${esc(l)}">${esc(l)}</option>`).join('');
       sel.innerHTML = `<option value="">— Selecionar —</option>${opts}<option value="__altro__">Outro (escrever...)</option>`;
       if (cur) sel.value = cur;
     }
@@ -1943,7 +1956,7 @@
     const matches = allTags.filter(t => t !== '' && !pending.includes(t) && (!q || t.includes(q)));
     if (!matches.length) { box.style.display = 'none'; return; }
     box.innerHTML = matches.slice(0,6).map(t =>
-      `<div class="ac-item" onmousedown="selectTag('${t.replace(/'/g,"\'")}','${ctx}')">${t}</div>`
+      `<div class="ac-item" onmousedown="selectTag('${escJs(t)}','${ctx}')">${esc(t)}</div>`
     ).join('');
     box.style.display = 'block';
   }
@@ -2167,10 +2180,10 @@
       container.innerHTML = nomes.map(nome => {
         const status = sessaoStatusMap[nome] || 'ausente';
         return `<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border);gap:8px">
-          <span style="font-size:13px;font-weight:500">${nome}</span>
+          <span style="font-size:13px;font-weight:500">${esc(nome)}</span>
           <div style="display:flex;gap:4px;flex-shrink:0">
             ${Object.entries(STATUS_INFO).map(([key, info]) => `
-              <button type="button" onclick="setSessaoStatus('${nome.replace(/'/g,"\\'")}','${key}')"
+              <button type="button" onclick="setSessaoStatus('${escJs(nome)}','${key}')"
                 style="padding:5px 9px;border-radius:8px;border:1.5px solid ${status===key?info.color:'var(--border)'};background:${status===key?info.color:'transparent'};color:${status===key?'#fff':'var(--muted)'};font-size:10px;font-weight:600;cursor:pointer">
                 ${info.label}
               </button>`).join('')}
@@ -2201,15 +2214,15 @@
       const status = sessaoStatusMap[nome] || 'ausente';
       const selId = 'conf-sel-' + nome.replace(/[^a-zA-Z0-9]/g,'');
       return `<div style="background:var(--surface);border:1px solid #f0d9a8;border-radius:10px;padding:10px 12px;margin-bottom:8px">
-        <div style="font-size:13px;font-weight:600;margin-bottom:2px">${nome}</div>
+        <div style="font-size:13px;font-weight:600;margin-bottom:2px">${esc(nome)}</div>
         <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Estava marcado como: <strong>${STATUS_LABEL[status]||status}</strong></div>
         <div style="display:flex;gap:6px">
           <select id="${selId}" style="flex:1;padding:6px 8px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:12px">
             <option value="">Selecionar jovem...</option>
-            ${ativos.map(j => `<option value="${j.name.replace(/"/g,'&quot;')}">${j.name}</option>`).join('')}
+            ${ativos.map(j => `<option value="${esc(j.name)}">${esc(j.name)}</option>`).join('')}
           </select>
-          <button type="button" onclick="aplicarConflito('${nome.replace(/'/g,"\\'")}','${selId}')" style="padding:6px 12px;border-radius:8px;border:none;background:var(--accent);color:#fff;font-size:11px;font-weight:600;cursor:pointer">Aplicar</button>
-          <button type="button" onclick="ignorarConflito('${nome.replace(/'/g,"\\'")}')" style="padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:none;color:var(--muted);font-size:11px;cursor:pointer">Ignorar</button>
+          <button type="button" onclick="aplicarConflito('${escJs(nome)}','${selId}')" style="padding:6px 12px;border-radius:8px;border:none;background:var(--accent);color:#fff;font-size:11px;font-weight:600;cursor:pointer">Aplicar</button>
+          <button type="button" onclick="ignorarConflito('${escJs(nome)}')" style="padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:none;color:var(--muted);font-size:11px;cursor:pointer">Ignorar</button>
         </div>
       </div>`;
     }).join('');
@@ -2364,7 +2377,7 @@
           <div id="faixa-body-${f.id}" style="display:none;border:1px solid var(--border);border-top:none;border-radius:0 0 12px 12px;overflow:hidden">
             ${lista.map((r,i) => `
               <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;${i>0?'border-top:1px solid var(--border)':''}">
-                <span style="font-size:13px;font-weight:500">${r.nome}</span>
+                <span style="font-size:13px;font-weight:500">${esc(r.nome)}</span>
                 <div style="text-align:right">
                   <div style="font-size:14px;font-weight:700;color:${f.color}">${r.pct}%</div>
                   <div style="font-size:10px;color:var(--muted)">${r.presentes}/${r.total}</div>
@@ -2389,7 +2402,7 @@
           <div id="faixa-body-semdados" style="display:none;border:1px solid var(--border);border-top:none;border-radius:0 0 12px 12px;overflow:hidden;opacity:0.7">
             ${semDados.map((r,i) => `
               <div style="padding:10px 14px;${i>0?'border-top:1px solid var(--border)':''}">
-                <span style="font-size:13px;font-weight:500">${r.nome}</span>
+                <span style="font-size:13px;font-weight:500">${esc(r.nome)}</span>
               </div>`).join('')}
           </div>
         </div>`;
@@ -2510,10 +2523,14 @@
     const genero = jovem.genero; // 'M' ou 'F'
     const idade = calcIdade(jovem.aniv);
 
-    // Sem ano cadastrado → categoria base pelo género (não força feminino)
+    // Sem ano cadastrado → mantém a categoria guardada SÓ se for do mesmo género;
+    // caso contrário usa a categoria base desse género.
     if (idade === null) {
-      if (genero === 'M') return jovem.cat && jovem.cat.toLowerCase().includes('mo') ? jovem.cat : 'Jovem Moço';
-      if (genero === 'F') return jovem.cat && jovem.cat.toLowerCase().includes('mo') ? jovem.cat : 'Jovem Moça';
+      const catAtual = (jovem.cat || '').trim().toLowerCase();
+      const CATS_M = ['jovem moço', 'criança menino', 'menino menor de 6'];
+      const CATS_F = ['jovem moça', 'criança menina', 'menina menor de 6'];
+      if (genero === 'M') return CATS_M.includes(catAtual) ? jovem.cat : 'Jovem Moço';
+      if (genero === 'F') return CATS_F.includes(catAtual) ? jovem.cat : 'Jovem Moça';
       return jovem.cat || 'Jovem Moça';
     }
 
@@ -2597,7 +2614,7 @@
       card.innerHTML = `
         <div class="pc-top" style="margin-bottom:0">
           <div>
-            <div class="pc-name">${jovem.auxiliar ? '🖋️ ' : ''}${jovem.name}${anivBadge}</div>
+            <div class="pc-name">${jovem.auxiliar ? '🖋️ ' : ''}${esc(jovem.name)}${anivBadge}</div>
             ${anivStr ? `<div style="font-size:11px;color:var(--muted);margin-top:2px">🎂 ${anivDisplay}</div>` : ''}
           </div>
           <div class="pc-status">
@@ -2639,7 +2656,7 @@
         const header = document.createElement('div');
         header.className = 'toggle-header' + (isCollapsed ? ' closed' : '');
         header.innerHTML = `
-          <span class="toggle-header-label">${cat} <span style="font-weight:400;font-size:11px">(${count})</span></span>
+          <span class="toggle-header-label">${esc(cat)} <span style="font-weight:400;font-size:11px">(${count})</span></span>
           <i class="toggle-chevron${isCollapsed ? '' : ' open'}">▾</i>`;
         header.onclick = () => toggleCat(cat);
 
@@ -2736,22 +2753,22 @@
         estadoIcone = '📦';
         estadoTexto = 'Mudou-se' + (j.mudancaLocal ? ` para ${j.mudancaLocal}` : '');
       }
-      linhas.push({ label: `${estadoIcone} Estado`, value: `<span style="background:#fbddd5;color:#c0392b;border-radius:100px;padding:3px 10px;font-size:11px;font-weight:600">${estadoTexto}</span>` });
+      linhas.push({ label: `${estadoIcone} Estado`, value: `<span style="background:#fbddd5;color:#c0392b;border-radius:100px;padding:3px 10px;font-size:11px;font-weight:600">${esc(estadoTexto)}</span>` });
     }
     if (j.auxiliar) linhas.push({ label: '🖋️ Auxiliar', value: 'Sim' });
     const grupo = getGrupoAuto(j);
-    if (grupo) linhas.push({ label: (j.genero === 'M' ? '♂️' : '♀️') + ' Categoria', value: grupo });
+    if (grupo) linhas.push({ label: (j.genero === 'M' ? '♂️' : '♀️') + ' Categoria', value: esc(grupo) });
     if (j.aniv) {
       const idade = calcIdade(j.aniv);
-      linhas.push({ label: '🎂 Aniversário', value: j.aniv + (idade !== null ? ` · ${idade} anos` : '') });
+      linhas.push({ label: '🎂 Aniversário', value: esc(j.aniv) + (idade !== null ? ` · ${idade} anos` : '') });
     }
     if (j.batismo) {
       const anosBatismo = calcIdade(j.batismo);
-      linhas.push({ label: '🙏 Batismo', value: j.batismo + (anosBatismo !== null ? ` · há ${anosBatismo} anos` : '') });
+      linhas.push({ label: '🙏 Batismo', value: esc(j.batismo) + (anosBatismo !== null ? ` · há ${anosBatismo} anos` : '') });
     }
     const irmaos = (j.irmaosIds || []).map(id => getJovemById(id)).filter(Boolean);
     if (irmaos.length) {
-      const chips = irmaos.map(ir => `<span onclick="openPerfil(db.jovens.findIndex(x=>x.id==='${ir.id}'))" style="cursor:pointer;background:var(--bg);border:1px solid var(--border);border-radius:100px;padding:3px 10px;font-size:12px">${ir.name}</span>`).join(' ');
+      const chips = irmaos.map(ir => `<span onclick="openPerfil(db.jovens.findIndex(x=>x.id==='${escJs(ir.id)}'))" style="cursor:pointer;background:var(--bg);border:1px solid var(--border);border-radius:100px;padding:3px 10px;font-size:12px">${esc(ir.name)}</span>`).join(' ');
       linhas.push({ label: '👨\u200d👩\u200d👧\u200d👦 Irmãos', value: `<span style="display:flex;flex-wrap:wrap;gap:5px;justify-content:flex-end">${chips}</span>` });
     }
     if (j.tel) linhas.push({ label: '📞 Telefone', value: j.tel });
@@ -2762,7 +2779,7 @@
       container.innerHTML = linhas.map((l, i) => `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 0;${i < linhas.length - 1 ? 'border-bottom:1px solid var(--border);' : ''}font-size:13px"><span style="color:var(--muted);flex-shrink:0">${l.label}</span><span>${l.value}</span></div>`).join('');
     }
     if (j.obs) {
-      container.innerHTML += `<div style="padding:10px 0 0;font-size:12px;color:var(--muted);font-style:italic">${j.obs}</div>`;
+      container.innerHTML += `<div style="padding:10px 0 0;font-size:12px;color:var(--muted);font-style:italic">${esc(j.obs)}</div>`;
     }
   }
 
@@ -2779,8 +2796,8 @@
     } else {
       list.innerHTML = irmaos.map(irmao => `
         <span style="display:inline-flex;align-items:center;gap:6px;background:var(--bg);border:1px solid var(--border);border-radius:100px;padding:5px 6px 5px 12px;font-size:13px">
-          <span style="font-weight:500">${irmao.name}</span>
-          <span onclick="removeIrmao('${irmao.id}')" style="cursor:pointer;color:var(--muted);font-size:15px;line-height:1;padding:2px 4px">×</span>
+          <span style="font-weight:500">${esc(irmao.name)}</span>
+          <span onclick="removeIrmao('${escJs(irmao.id)}')" style="cursor:pointer;color:var(--muted);font-size:15px;line-height:1;padding:2px 4px">×</span>
         </span>`).join('');
     }
     const searchInp = document.getElementById('ej-irmao-search');
@@ -2850,8 +2867,8 @@
       const descText = h.note || h.desc || '';
       return `<div class="hist-item" style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px;padding:8px 0;border-bottom:1px solid var(--border)">
         <div style="flex:1;min-width:0">
-          <div style="font-size:13px;font-weight:600">${label}</div>
-          <div style="font-size:12px;color:var(--muted)">${fmtDate(h.date)}${descText ? ' · '+descText : ''}</div>
+          <div style="font-size:13px;font-weight:600">${esc(label)}</div>
+          <div style="font-size:12px;color:var(--muted)">${fmtDate(h.date)}${descText ? ' · '+esc(descText) : ''}</div>
         </div>
         <div style="display:flex;gap:4px;flex-shrink:0">
           <button onclick="openEditInter(${idx},${realIdx})" style="background:none;border:1px solid var(--border);border-radius:8px;padding:3px 7px;font-size:11px;cursor:pointer">✏️</button>
@@ -3045,8 +3062,8 @@
       return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:10px;cursor:pointer" onclick="openViagemDetail(${v._idx})">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
           <div style="flex:1">
-            <div style="font-size:16px;font-weight:600;letter-spacing:-0.2px;margin-bottom:4px">📍 ${v.destino||'Sem destino'}</div>
-            ${v.evento ? `<div style="font-size:12px;color:var(--accent3);margin-bottom:4px">🗓 ${v.evento}</div>` : ''}
+            <div style="font-size:16px;font-weight:600;letter-spacing:-0.2px;margin-bottom:4px">📍 ${esc(v.destino||'Sem destino')}</div>
+            ${v.evento ? `<div style="font-size:12px;color:var(--accent3);margin-bottom:4px">🗓 ${esc(v.evento)}</div>` : ''}
             <div style="font-size:12px;color:var(--muted)">${dateStr}</div>
             <div style="display:flex;gap:8px;margin-top:6px">
               <span style="font-size:11px;background:var(--bg);border:1px solid var(--border);border-radius:100px;padding:2px 8px">👥 ${confirmados}/${totalPart}</span>
@@ -3093,8 +3110,8 @@
       <div class="vd-header">
         <button class="vd-back" onclick="closeViagemDetail()">‹ Voltar</button>
         <div style="flex:1">
-          <div class="vd-title">📍 ${v.destino||'Sem destino'}</div>
-          <div class="vd-meta">${v.evento ? '🗓 '+v.evento+' · ' : ''}${dateStr}</div>
+          <div class="vd-title">📍 ${esc(v.destino||'Sem destino')}</div>
+          <div class="vd-meta">${v.evento ? '🗓 '+esc(v.evento)+' · ' : ''}${dateStr}</div>
         </div>
         <button onclick="delViagemFromDetail()" style="background:none;border:none;color:#E07B54;font-size:18px;cursor:pointer">🗑</button>
       </div>
@@ -3105,7 +3122,7 @@
         <div>
           <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Destino</div>
           <div class="ac-wrap">
-            <input class="form-input" type="text" id="vde-destino-input" value="${v.destino||''}"
+            <input class="form-input" type="text" id="vde-destino-input" value="${esc(v.destino||'')}"
               placeholder="Buscar ou escrever destino..." autocomplete="off" style="font-size:13px"
               oninput="acLocal(this,'ac-vde-local')" onfocus="acLocal(this,'ac-vde-local')"
               onblur="setTimeout(()=>{ hideAc('ac-vde-local'); saveViagemField('destino',document.getElementById('vde-destino-input').value.trim()) },200)">
@@ -3115,7 +3132,7 @@
         <div>
           <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Evento</div>
           <div class="ac-wrap">
-            <input class="form-input" type="text" id="vde-evento" value="${v.evento||''}" placeholder="Buscar ou escrever evento..."
+            <input class="form-input" type="text" id="vde-evento" value="${esc(v.evento||'')}" placeholder="Buscar ou escrever evento..."
               autocomplete="off" oninput="acEventoEdit(this.value)" onfocus="acEventoEdit(this.value)"
               onblur="setTimeout(()=>{ hideAc('ac-evento-edit'); saveViagemField('evento',document.getElementById('vde-evento').value) },200)"
               style="font-size:13px">
@@ -3202,8 +3219,8 @@
     const matches = q ? all.filter(e=>(e.tipo+' '+e.local).toLowerCase().includes(q)) : all.slice(0,5);
     if (!matches.length) { box.style.display='none'; return; }
     box.innerHTML = matches.slice(0,5).map(e =>
-      `<div class="ac-item" onmousedown="selectAcEventoEdit('${(e.tipo+' — '+(e.local||'')+' ('+fmtDate(e.data)+')').replace(/'/g,"\'")}')">
-        <div>${e.tipo}${e.local?' — '+e.local:''}</div>
+      `<div class="ac-item" onmousedown="selectAcEventoEdit('${escJs(e.tipo+' — '+(e.local||'')+' ('+fmtDate(e.data)+')')}')">
+        <div>${esc(e.tipo)}${e.local?' — '+esc(e.local):''}</div>
         <div class="ac-sub">${fmtDate(e.data)}</div>
       </div>`
     ).join('');
@@ -3234,7 +3251,7 @@
       row.className = 'inv-row' + (c.confirmado ? ' confirmed' : '');
       row.innerHTML = `
         <input type="checkbox" class="inv-check" ${c.confirmado?'checked':''} onchange="toggleConvidado(${i},this.checked)">
-        <input type="text" class="inv-nome" value="${nomeAtualDoJovem(c.nome,c.jovemId)||''}" placeholder="Nome..." onchange="editConvidadoNome(${i},this.value)" ${c.confirmado?'style="text-decoration:line-through;color:#2e7d32"':''}>
+        <input type="text" class="inv-nome" value="${esc(nomeAtualDoJovem(c.nome,c.jovemId)||'')}" placeholder="Nome..." onchange="editConvidadoNome(${i},this.value)" ${c.confirmado?'style="text-decoration:line-through;color:#2e7d32"':''}>
         <button class="inv-del" onclick="delConvidado(${i})">×</button>
       `;
       container.appendChild(row);
@@ -3271,7 +3288,7 @@
       matches.forEach(j => {
         const item = document.createElement('div');
         item.style.cssText = 'padding:10px 12px;font-size:14px;cursor:pointer;border-bottom:1px solid var(--border)';
-        item.innerHTML = `${j.name} <span style="font-size:11px;color:var(--muted)">${j.cat||''}</span>`;
+        item.innerHTML = `${esc(j.name)} <span style="font-size:11px;color:var(--muted)">${esc(j.cat||'')}</span>`;
         item.addEventListener('mousedown', (e) => e.preventDefault());
         item.addEventListener('click', () => {
           inp.value = j.name;
@@ -3349,7 +3366,7 @@
       card.className = 'carro-card';
       card.innerHTML = `
         <div class="carro-header">
-          <div class="carro-titulo">🚗 ${nomeAtualDoJovem(carro.motorista, carro.motoristaId)}</div>
+          <div class="carro-titulo">🚗 ${esc(nomeAtualDoJovem(carro.motorista, carro.motoristaId))}</div>
           <div style="display:flex;align-items:center;gap:6px">
             <select onchange="setCarroLugares(${ci},this.value)" style="border:1px solid var(--border);border-radius:100px;padding:4px 10px;font-size:12px;background:var(--bg);color:var(--text)">
               ${[2,3,4,5,6,7,8].map(n=>`<option value="${n}" ${n===carro.lugares?'selected':''}>${n-1} pass.</option>`).join('')}
@@ -3649,8 +3666,8 @@
       } else {
         const compacta = opts.style === 'compacta';
         item.style.cssText = (dimmed ? 'opacity:0.5;' : '') + `padding:${compacta ? '10px 12px' : '12px 4px'};border-bottom:1px solid var(--border)`;
-        item.innerHTML = `<div style="font-size:${compacta ? '14px' : '15px'};font-weight:500">${j.name}${dimmed && opts.dimLabel ? ` <span style="font-size:11px;color:var(--muted)">${opts.dimLabel}</span>` : ''}</div>
-          <div style="font-size:${compacta ? '11px' : '12px'};color:var(--muted)">${j.cat||''}</div>`;
+        item.innerHTML = `<div style="font-size:${compacta ? '14px' : '15px'};font-weight:500">${esc(j.name)}${dimmed && opts.dimLabel ? ` <span style="font-size:11px;color:var(--muted)">${opts.dimLabel}</span>` : ''}</div>
+          <div style="font-size:${compacta ? '11px' : '12px'};color:var(--muted)">${esc(j.cat||'')}</div>`;
       }
       const pick = (e) => {
         e.preventDefault();
@@ -3685,8 +3702,8 @@
       : all.slice(0, 6);
     if (!matches.length) { box.style.display = 'none'; return; }
     box.innerHTML = matches.slice(0,6).map(e =>
-      `<div class="ac-item" onmousedown="selectAcEvento('${e.tipo} — ${e.local||''} (${fmtDate(e.data)})', '${e.data}')">
-        <div>${e.tipo}${e.local ? ' — '+e.local : ''}</div>
+      `<div class="ac-item" onmousedown="selectAcEvento('${escJs(e.tipo+' — '+(e.local||'')+' ('+fmtDate(e.data)+')')}', '${escJs(e.data)}')">
+        <div>${esc(e.tipo)}${e.local ? ' — '+esc(e.local) : ''}</div>
         <div class="ac-sub">${fmtDate(e.data)}</div>
       </div>`
     ).join('');
@@ -4009,7 +4026,7 @@
     const hist = (j.interactions||[]).filter(i=>i.tipo===tipo).sort((a,b)=>new Date(b.date)-new Date(a.date));
     const div = document.getElementById('inter-hist');
     if (!hist.length) { div.innerHTML = `<div style="font-size:13px;color:var(--muted);padding:8px 0">Nenhuma entrada ainda.</div>`; return; }
-    div.innerHTML = hist.map(h => `<div class="hist-item"><span>${fmtDate(h.date)}${h.note?' · '+h.note:''}</span><button class="hist-del" onclick="delInter(${idx},'${tipo}',${j.interactions.indexOf(h)})">✕</button></div>`).join('');
+    div.innerHTML = hist.map(h => `<div class="hist-item"><span>${fmtDate(h.date)}${h.note?' · '+esc(h.note):''}</span><button class="hist-del" onclick="delInter(${idx},'${tipo}',${j.interactions.indexOf(h)})">✕</button></div>`).join('');
   }
 
   function saveInter() {
@@ -4250,10 +4267,37 @@
     // updateStats called after DOMContentLoaded, not here
   }
 
+  // Avisa só uma vez por sessão, para não encher o ecrã de alertas
+  let _avisoMemoriaMostrado = false;
+
   function saveDB() {
-    localStorage.setItem('cooperador_db', JSON.stringify(db));
+    let ok = false;
+    try {
+      localStorage.setItem('cooperador_db', JSON.stringify(db));
+      ok = true;
+    } catch (e) {
+      // Memória do navegador cheia: a cache dos versículos é só uma cópia do que
+      // vem da internet, por isso pode ser esvaziada sem perder dados.
+      const cacheTinhaDados = db.versiculosCache && Object.keys(db.versiculosCache).length > 0;
+      if (cacheTinhaDados) {
+        db.versiculosCache = {};
+        try {
+          localStorage.setItem('cooperador_db', JSON.stringify(db));
+          ok = true;
+        } catch (e2) { /* continua cheio — trata abaixo */ }
+      }
+      if (!ok) {
+        console.error('saveDB falhou:', e);
+        if (!_avisoMemoriaMostrado) {
+          _avisoMemoriaMostrado = true;
+          chzAlert('⚠️ Não foi possível guardar as alterações: a memória do navegador está cheia.\n\nFaz já um backup (Exportar ou Gist) para não perder dados, e depois apaga conteúdos que já não precisas.');
+        }
+      }
+    }
+    if (ok) _avisoMemoriaMostrado = false;
     // Only update stats if DOM is ready
     if (document.readyState === 'complete' || document.readyState === 'interactive') { updateStats(); atualizarBadgeAniversarios(); }
+    return ok;
   }
 
   function updateStats() {
@@ -4305,7 +4349,7 @@
       const timeStr = d.toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'});
       return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px">
         <div>
-          <div style="font-weight:500">${h.filename}</div>
+          <div style="font-weight:500">${esc(h.filename)}</div>
           <div style="font-size:11px;color:var(--muted)">${dateStr} às ${timeStr}</div>
         </div>
         <span style="font-size:11px;color:var(--accent);font-weight:600">${h.count} registros</span>
@@ -4351,7 +4395,7 @@
     }
     container.innerHTML = list.map((l, i) => `
       <div style="display:flex;align-items:center;justify-content:space-between;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:9px 12px;font-size:13px">
-        <span>📍 ${l}</span>
+        <span>📍 ${esc(l)}</span>
         <button onclick="delLuogo(${i})" style="background:none;border:none;color:#E07B54;font-size:16px;cursor:pointer;padding:0 4px;line-height:1">×</button>
       </div>`).join('');
   }
@@ -4590,8 +4634,26 @@
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     const today = new Date().toISOString().slice(0,10).replace(/-/g,'_');
-    a.download = `Chazak_backup_${today}_(v5.6.2).json`;
+    a.download = `Chazak_backup_${today}_(v5.6.3).json`;
     a.click();
+  }
+
+  // Verifica se um objeto tem a forma de um backup do Chazak.
+  // Devolve '' se estiver tudo bem, ou uma frase a explicar o problema.
+  function validarBackup(obj) {
+    if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return 'O conteúdo não é um objeto de dados.';
+    const LISTAS = ['jovens','servicos','viagens','leituras','curiosidades','livros','favoritos','luoghi','ideias','encontros','presencas','eventos'];
+    const conhecidas = LISTAS.filter(k => k in obj);
+    if (!conhecidas.length) return 'Não tem nenhuma das secções da app (jovens, palavras, agenda, …).';
+    for (const k of conhecidas) {
+      if (!Array.isArray(obj[k])) return `A secção "${k}" não é uma lista.`;
+    }
+    if (Array.isArray(obj.jovens)) {
+      const mau = obj.jovens.findIndex(j => !j || typeof j !== 'object' || typeof j.name !== 'string' || !j.name.trim());
+      if (mau !== -1) return `O jovem nº ${mau + 1} não tem nome válido.`;
+    }
+    if (Array.isArray(obj.luoghi) && obj.luoghi.some(l => typeof l !== 'string')) return 'A lista de localidades tem valores inválidos.';
+    return '';
   }
 
   function importData() {
@@ -4601,18 +4663,42 @@
     input.onchange = e => {
       const file = e.target.files[0];
       const reader = new FileReader();
-      reader.onload = ev => {
+      reader.onload = async ev => {
+        let imported;
         try {
-          const imported = JSON.parse(ev.target.result);
+          imported = JSON.parse(ev.target.result);
+        } catch {
+          chzAlert('❌ Arquivo inválido: não é um ficheiro JSON.');
+          return;
+        }
+        const erro = validarBackup(imported);
+        if (erro) {
+          chzAlert('❌ Este ficheiro não parece um backup do Chazak.\n\n' + erro + '\n\nNada foi alterado.');
+          return;
+        }
+        const NOMES = { jovens:'Jovens', servicos:'Palavras', viagens:'Viagens', leituras:'Leituras', curiosidades:'Curiosidades',
+                        livros:'Livros', favoritos:'Favoritos', luoghi:'Localidades', ideias:'Ideias', encontros:'Encontros',
+                        presencas:'Presenças', eventos:'Eventos' };
+        const resumo = Object.keys(NOMES)
+          .filter(k => Array.isArray(imported[k]))
+          .map(k => `${NOMES[k]}: ${imported[k].length}`)
+          .join('\n');
+        const ok = await chzConfirm(`Importar "${file.name}"?\n\n${resumo}\n\nAs secções presentes no ficheiro vão SUBSTITUIR as deste dispositivo. Se tiveres dúvidas, faz primeiro um backup.`, 'Importar');
+        if (!ok) return;
+        try {
           db = { ...db, ...imported };
+          if (!db.versiculosCache || typeof db.versiculosCache !== 'object') db.versiculosCache = {};
           initJovens(); // garante ID único mesmo em jovens vindos de um backup mais antigo
-          saveDB();
+          const guardado = saveDB();
           // Count total records
           const count = Object.values(imported).reduce((n, v) => n + (Array.isArray(v) ? v.length : 0), 0);
           logImport(file.name, count);
-          chzAlert('✅ Dados importados com sucesso!');
+          if (guardado) chzAlert('✅ Dados importados com sucesso!');
           renderTracker();
-        } catch { chzAlert('❌ Arquivo inválido.'); }
+        } catch (e) {
+          console.error(e);
+          chzAlert('❌ Erro ao importar: ' + (e.message || e));
+        }
       };
       reader.readAsText(file);
     };
@@ -4867,12 +4953,12 @@
         <div class="ev-card">
           <div class="ev-card-stripe" style="background:${color}"></div>
           <div class="ev-card-body">
-            <div class="ev-card-tipo" style="color:${color}">${ev.tipo}</div>
-            <div class="ev-card-titulo">${ev.titulo}</div>
+            <div class="ev-card-tipo" style="color:${color}">${esc(ev.tipo)}</div>
+            <div class="ev-card-titulo">${esc(ev.titulo)}</div>
             <div class="ev-card-meta">
-              ${ev.hora ? '🕐 '+ev.hora : ''}${ev.hora && ev.local ? ' · ' : ''}${ev.local ? '📍 '+ev.local : ''}
-              ${ev.palavra ? '<br>📖 '+ev.palavra : ''}
-              ${ev.notas ? '<br><i>'+ev.notas+'</i>' : ''}
+              ${ev.hora ? '🕐 '+esc(ev.hora) : ''}${ev.hora && ev.local ? ' · ' : ''}${ev.local ? '📍 '+esc(ev.local) : ''}
+              ${ev.palavra ? '<br>📖 '+esc(ev.palavra) : ''}
+              ${ev.notas ? '<br><i>'+esc(ev.notas)+'</i>' : ''}
             </div>
           </div>
           ${idx >= 0 ? `
@@ -5128,7 +5214,7 @@
         const dado = (db.versiculosCache || {})[chaveVersiculo(parsed.abrev, parsed.cap, n)];
         if (dado) {
           const numLabel = parsed.versFim > parsed.versInicio ? `<strong>${n}.</strong> ` : '';
-          partes.push(`<div style="font-size:14px;font-style:italic;line-height:1.6;margin-bottom:6px">${numLabel}${dado.texto}</div>`);
+          partes.push(`<div style="font-size:14px;font-style:italic;line-height:1.6;margin-bottom:6px">${numLabel}${esc(dado.texto)}</div>`);
         } else {
           faltaAlgum = true;
         }
@@ -5141,7 +5227,7 @@
     }
 
     card.innerHTML = `
-      <div style="font-size:12px;font-weight:700;color:var(--accent4);margin-bottom:8px">📖 ${ref} <span style="font-weight:400;color:var(--muted)">(ACF)</span></div>
+      <div style="font-size:12px;font-weight:700;color:var(--accent4);margin-bottom:8px">📖 ${esc(ref)} <span style="font-weight:400;color:var(--muted)">(ACF)</span></div>
       ${corpo}
       <button onclick="this.closest('div[style*=fixed]').remove()" style="margin-top:12px;width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);background:none;color:var(--muted);font-size:12px;cursor:pointer">Fechar</button>
     `;
@@ -5159,7 +5245,7 @@
     const matches = BIBLIA_LIVROS_AC.filter(l => l.toLowerCase().startsWith(q) || l.toLowerCase().includes(q));
     if (!matches.length) { box.style.display = 'none'; return; }
     box.innerHTML = matches.slice(0,8).map(l =>
-      `<div class="ac-item" onmousedown="selectPalavra('${l.replace(/'/g,"\'")}','${dropId}',this)">${l}</div>`
+      `<div class="ac-item" onmousedown="selectPalavra('${escJs(l)}','${dropId}',this)">${esc(l)}</div>`
     ).join('');
     box.style.display = 'block';
   }
@@ -5226,8 +5312,8 @@
         row.innerHTML = `
           <div style="display:flex;justify-content:space-between;align-items:center">
             <div>
-              <div style="font-weight:600">${ev.titulo || ev.local}</div>
-              <div style="font-size:11px;color:var(--muted);margin-top:2px">${dayStr}${ev.hora ? ' · '+ev.hora : ''}${ev.local ? ' · 📍'+ev.local : ''}</div>
+              <div style="font-weight:600">${esc(ev.titulo || ev.local)}</div>
+              <div style="font-size:11px;color:var(--muted);margin-top:2px">${dayStr}${ev.hora ? ' · '+esc(ev.hora) : ''}${ev.local ? ' · 📍'+esc(ev.local) : ''}</div>
             </div>
             <div style="font-size:11px;font-weight:600;color:#E07B54;white-space:nowrap;margin-left:10px">${faltaStr}</div>
           </div>`;
@@ -5323,7 +5409,7 @@
       const lbl = document.createElement('div');
       lbl.className = 'agenda-section-label';
       lbl.style.opacity = groupAllPast ? '0.45' : '1';
-      lbl.innerHTML = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${color};margin-right:6px;vertical-align:middle"></span>${tipo}`;
+      lbl.innerHTML = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${color};margin-right:6px;vertical-align:middle"></span>${esc(tipo)}`;
       container.appendChild(lbl);
 
       const wrap = document.createElement('div');
@@ -5340,9 +5426,9 @@
         const rowOpacity = (!groupAllPast && isPast) ? ';opacity:0.4' : '';
         row.style.cssText = `display:flex;justify-content:space-between;align-items:center;padding:9px 14px;font-size:13px;${i > 0 ? 'border-top:1px solid var(--border)' : ''}${rowOpacity}`;
         row.innerHTML = `
-          <div style="flex:1;min-width:0;cursor:pointer" onclick="openDia('${ev.data}',[])">
-            <div style="font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${ev.local || ev.titulo}</div>
-            <div style="font-size:11px;color:var(--muted)">${dayStr}${ev.hora ? ' · '+ev.hora : ''}${ev.notas ? ' · <i>'+ev.notas+'</i>' : ''}</div>
+          <div style="flex:1;min-width:0;cursor:pointer" onclick="openDia('${escJs(ev.data)}',[])">
+            <div style="font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(ev.local || ev.titulo)}</div>
+            <div style="font-size:11px;color:var(--muted)">${dayStr}${ev.hora ? ' · '+esc(ev.hora) : ''}${ev.notas ? ' · <i>'+esc(ev.notas)+'</i>' : ''}</div>
           </div>
           <div style="display:flex;gap:4px;flex-shrink:0;margin-left:8px">
             <button onclick="toggleImportante(${realIdx},this)" style="background:none;border:1px solid var(--border);border-radius:8px;padding:4px 7px;font-size:12px;font-weight:700;cursor:pointer;opacity:${ev.importante?'1':'0.25'};color:${ev.importante?'#E07B54':'var(--muted)'}">!</button>
@@ -5534,7 +5620,7 @@
       <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border)">
         <span style="font-size:20px">${l.icon}</span>
         <div style="flex:1;min-width:0">
-          <div style="font-size:14px;font-weight:600">${l.nome}</div>
+          <div style="font-size:14px;font-weight:600">${esc(l.nome)}</div>
           <div style="font-size:11px;color:var(--muted)">${l.label} · ${l.quando === 'hoje' ? 'Hoje!' : 'Amanhã'}</div>
         </div>
       </div>`).join('');
@@ -5612,7 +5698,7 @@
         <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:14px;color:var(--muted)">🔍</span>
         <input id="serv-search-bar" type="text" placeholder="Buscar por serviço, dia, cidade ou livro..."
           style="width:100%;padding:10px 12px 10px 34px;border-radius:12px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;box-sizing:border-box"
-          value="${servBusca}" oninput="servBusca=this.value;renderServicos()">`;
+          value="${esc(servBusca)}" oninput="servBusca=this.value;renderServicos()">`;
       container.parentElement.insertBefore(barWrap, container);
       searchBar = barWrap.querySelector('#serv-search-bar');
     }
@@ -5696,14 +5782,14 @@
           <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
             <div style="flex:1">
               <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-                <span style="font-size:11px;font-weight:600;color:${color};text-transform:uppercase">${s.tipo}</span>
+                <span style="font-size:11px;font-weight:600;color:${color};text-transform:uppercase">${esc(s.tipo)}</span>
                 ${s._eventoRef ? `<span style="font-size:10px;background:var(--border);color:var(--muted);border-radius:6px;padding:2px 6px">📅 agenda</span>` : ''}
                 <span style="font-size:11px;color:var(--muted)">${dateStr}</span>
               </div>
-              ${s.local ? `<div style="font-size:13px;font-weight:500;margin-bottom:2px">📍 ${s.local}</div>` : ''}
-              ${s.palavra ? `<div style="font-size:12px;color:var(--accent4);margin-bottom:2px">📖 ${s.palavra}</div>` : ''}
-              ${s.recitativos ? `<div style="font-size:12px;color:var(--muted);font-style:italic">${s.recitativos} Recitativos</div>` : ''}
-              ${s.notas ? `<div style="font-size:12px;color:var(--muted);margin-top:4px;font-style:italic">${s.notas}</div>` : ''}
+              ${s.local ? `<div style="font-size:13px;font-weight:500;margin-bottom:2px">📍 ${esc(s.local)}</div>` : ''}
+              ${s.palavra ? `<div style="font-size:12px;color:var(--accent4);margin-bottom:2px">📖 ${esc(s.palavra)}</div>` : ''}
+              ${s.recitativos ? `<div style="font-size:12px;color:var(--muted);font-style:italic">${esc(s.recitativos)} Recitativos</div>` : ''}
+              ${s.notas ? `<div style="font-size:12px;color:var(--muted);margin-top:4px;font-style:italic">${esc(s.notas)}</div>` : ''}
             </div>
             <div style="display:flex;gap:4px;flex-shrink:0">
               <button onclick="openEditServico(${realIdx})" style="background:none;border:1px solid var(--border);border-radius:8px;padding:4px 8px;font-size:12px;cursor:pointer">✏️</button>
@@ -5837,7 +5923,7 @@
       card.style.cssText = `background:var(--surface);border:1px solid var(--border);border-left:3px solid ${color};border-radius:var(--radius);padding:12px 14px;margin-bottom:8px;cursor:pointer;display:flex;justify-content:space-between;align-items:center`;
       card.innerHTML = `
         <div>
-          <div style="font-weight:600;font-size:15px;margin-bottom:4px">${l.nome}</div>
+          <div style="font-weight:600;font-size:15px;margin-bottom:4px">${esc(l.nome)}</div>
           <div style="font-size:11px;color:var(--muted);display:flex;gap:10px">
             <span>📖 ${capCount} cap.</span>
             <span>📚 ${dictCount} termos</span>
@@ -5917,7 +6003,7 @@
         <div onclick="fecharLivroBtn()" style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px 8px;margin:-10px 0 -10px -8px;flex:1">
           <button style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted);padding:0;pointer-events:none">‹</button>
           <div>
-            <div style="font-size:20px;font-weight:700">${livro.nome}</div>
+            <div style="font-size:20px;font-weight:700">${esc(livro.nome)}</div>
             <div style="font-size:11px;color:${color};font-weight:600">${test === 'AT' ? 'Antigo Testamento' : 'Novo Testamento'}</div>
           </div>
         </div>
@@ -5940,7 +6026,7 @@
           <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
             <div style="flex:1;min-width:0">
               <div style="font-weight:600;font-size:14px;margin-bottom:3px">Cap. ${cap.num}</div>
-              ${preview ? `<div style="font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${preview}</div>` : ''}
+              ${preview ? `<div style="font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(preview)}</div>` : ''}
             </div>
             <span style="font-size:18px;color:var(--muted);flex-shrink:0">›</span>
           </div>
@@ -5962,8 +6048,8 @@
           <div onclick="verTermo(${ti})" style="background:var(--surface);border:1px solid var(--border);border-left:3px solid ${color};border-radius:var(--radius);padding:12px 14px;margin-bottom:8px;cursor:pointer">
             <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
               <div style="flex:1;min-width:0">
-                <div style="font-weight:600;font-size:14px;margin-bottom:3px">${t.termo}</div>
-                <div style="font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${_stripInlineMarkup(t.def||'').slice(0,80)}${_stripInlineMarkup(t.def||'').length>80?'…':''}</div>
+                <div style="font-weight:600;font-size:14px;margin-bottom:3px">${esc(t.termo)}</div>
+                <div style="font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(_stripInlineMarkup(t.def||'').slice(0,80))}${_stripInlineMarkup(t.def||'').length>80?'…':''}</div>
               </div>
               <span style="font-size:18px;color:var(--muted);flex-shrink:0">›</span>
             </div>
@@ -5985,8 +6071,8 @@
           <div onclick="verVersiculo(${vi})" style="background:var(--surface);border:1px solid var(--border);border-left:3px solid ${color};border-radius:var(--radius);padding:12px 14px;margin-bottom:8px;cursor:pointer">
             <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
               <div style="flex:1;min-width:0">
-                <div style="font-size:11px;font-weight:600;color:${color};margin-bottom:4px">📖 ${v.ref}</div>
-                <div style="font-size:13px;font-style:italic;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">"${v.texto}"</div>
+                <div style="font-size:11px;font-weight:600;color:${color};margin-bottom:4px">📖 ${esc(v.ref)}</div>
+                <div style="font-size:13px;font-style:italic;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">"${esc(v.texto)}"</div>
               </div>
               <span style="font-size:18px;color:var(--muted);flex-shrink:0">›</span>
             </div>
@@ -6004,7 +6090,7 @@
     const color = livroTestamento(livro.nome) === 'AT' ? 'var(--accent2)' : 'var(--accent4)';
     document.getElementById('ver-nota-conteudo').innerHTML = `
       <div style="margin-bottom:16px">
-        <div style="font-size:11px;font-weight:600;color:${color};text-transform:uppercase;margin-bottom:6px">📖 ${livro.nome}</div>
+        <div style="font-size:11px;font-weight:600;color:${color};text-transform:uppercase;margin-bottom:6px">📖 ${esc(livro.nome)}</div>
         <div style="font-size:22px;font-weight:700;margin-bottom:12px">Cap. ${cap.num}</div>
         <div style="border-top:1px solid var(--border);padding-top:14px">${renderNotaTexto(cap.texto||'')}</div>
       </div>
@@ -6022,8 +6108,8 @@
     const color = livroTestamento(livro.nome) === 'AT' ? 'var(--accent2)' : 'var(--accent4)';
     document.getElementById('ver-nota-conteudo').innerHTML = `
       <div style="margin-bottom:16px">
-        <div style="font-size:11px;font-weight:600;color:${color};text-transform:uppercase;margin-bottom:6px">📚 Dicionário — ${livro.nome}</div>
-        <div style="font-size:22px;font-weight:700;margin-bottom:12px">${t.termo}</div>
+        <div style="font-size:11px;font-weight:600;color:${color};text-transform:uppercase;margin-bottom:6px">📚 Dicionário — ${esc(livro.nome)}</div>
+        <div style="font-size:22px;font-weight:700;margin-bottom:12px">${esc(t.termo)}</div>
         <div style="border-top:1px solid var(--border);padding-top:14px;font-size:14px;line-height:1.7">${renderNotaTexto(t.def||'')}</div>
       </div>
       <div style="display:flex;gap:8px;margin-top:16px">
@@ -6040,9 +6126,9 @@
     const color = livroTestamento(livro.nome) === 'AT' ? 'var(--accent2)' : 'var(--accent4)';
     document.getElementById('ver-nota-conteudo').innerHTML = `
       <div style="margin-bottom:16px">
-        <div style="font-size:11px;font-weight:600;color:${color};text-transform:uppercase;margin-bottom:6px">⭐ Versículos — ${livro.nome}</div>
-        <div style="font-size:15px;font-weight:600;color:${color};margin-bottom:14px">📖 ${v.ref}</div>
-        <div style="border-top:1px solid var(--border);padding-top:14px;font-size:16px;font-style:italic;line-height:1.8">"${formatInline((v.texto||'').replace(/\n/g,'<br>'))}"</div>
+        <div style="font-size:11px;font-weight:600;color:${color};text-transform:uppercase;margin-bottom:6px">⭐ Versículos — ${esc(livro.nome)}</div>
+        <div style="font-size:15px;font-weight:600;color:${color};margin-bottom:14px">📖 ${esc(v.ref)}</div>
+        <div style="border-top:1px solid var(--border);padding-top:14px;font-size:16px;font-style:italic;line-height:1.8">"${formatInline(v.texto||'').replace(/\n/g,'<br>')}"</div>
       </div>
       <div style="display:flex;gap:8px;margin-top:16px">
         <button onclick="closeModal('modal-ver-nota');openEditVersiculo(${vi})" style="flex:1;padding:10px;border-radius:10px;border:1px solid var(--border);background:var(--surface);font-size:13px;cursor:pointer">✏️ Editar</button>
@@ -6216,7 +6302,7 @@
           <div style="flex:1">
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
               <span style="font-size:11px;font-weight:600;color:${badgeColor};background:${badgeColor}18;border-radius:100px;padding:2px 8px">${badge}</span>
-              <span style="font-size:13px;font-weight:600">${l.passagem}</span>
+              <span style="font-size:13px;font-weight:600">${esc(l.passagem)}</span>
             </div>
             <div style="font-size:11px;color:var(--muted);margin-bottom:${l.notas?'4px':'0'}">${dateStr}</div>
             ${l.notas ? `<div style="font-size:12px;color:var(--muted);font-style:italic">${renderNotaTexto(l.notas)}</div>` : ''}
@@ -6313,10 +6399,11 @@
   }
 
   function formatInline(text) {
+    text = esc(text); // primeiro torna o texto seguro; depois aplica a formatação
     // "Referência" → versículo em destaque TOCÁVEL (abre janelinha com o texto buscado)
     // Aceita simples ("João 3:16") ou intervalo ("João 3:16-19")
-    text = text.replace(/"([1-3]?\s?[A-Za-zÀ-ÖØ-öø-ÿ]+(?:\s[A-Za-zÀ-ÖØ-öø-ÿ]+)?\s\d{1,3}:\d{1,3}(?:-\d{1,3})?)"/g,
-      (m, ref) => `<span onclick="mostrarVersiculoPeek(event,'${ref.replace(/'/g,"\\'")}')" style="display:inline-block;background:var(--accent4);color:white;border-radius:6px;padding:1px 7px;font-size:11px;font-weight:600;margin:0 2px;cursor:pointer;text-decoration:underline dotted;text-decoration-color:rgba(255,255,255,0.6)">${ref}</span>`);
+    text = text.replace(/&quot;([1-3]?\s?[A-Za-zÀ-ÖØ-öø-ÿ]+(?:\s[A-Za-zÀ-ÖØ-öø-ÿ]+)?\s\d{1,3}:\d{1,3}(?:-\d{1,3})?)&quot;/g,
+      (m, ref) => `<span onclick="mostrarVersiculoPeek(event,'${escJs(ref)}')" style="display:inline-block;background:var(--accent4);color:white;border-radius:6px;padding:1px 7px;font-size:11px;font-weight:600;margin:0 2px;cursor:pointer;text-decoration:underline dotted;text-decoration-color:rgba(255,255,255,0.6)">${ref}</span>`);
     // [Referência] → versículo em destaque simples (sem busca automática)
     text = text.replace(/\[([^\]]+)\]/g, '<span style="display:inline-block;background:var(--accent4);color:white;border-radius:6px;padding:1px 7px;font-size:11px;font-weight:600;margin:0 2px">$1</span>');
     // ==verde== · ~~azul~~ · !!rosa!! → marca-texto (destaque de cor)
@@ -6380,7 +6467,7 @@
         const color = CAT_COLOR[cat] || '#757575';
         const lbl = document.createElement('div');
         lbl.className = 'agenda-section-label';
-        lbl.innerHTML = `${catInfo?.icon||''} ${cat}`;
+        lbl.innerHTML = `${catInfo?.icon||''} ${esc(cat)}`;
         lbl.style.color = color;
         container.appendChild(lbl);
         grupos[cat].forEach(c => container.appendChild(_makeCurCard(c, color)));
@@ -6420,12 +6507,12 @@
       <div style="display:flex;justify-content:space-between;gap:8px">
         <div style="flex:1;min-width:0">
           <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
-            <span style="font-size:10px;font-weight:600;color:${color};text-transform:uppercase">${catInfo?.icon||''} ${c.categoria||'Curiosidades'}</span>
+            <span style="font-size:10px;font-weight:600;color:${color};text-transform:uppercase">${catInfo?.icon||''} ${esc(c.categoria||'Curiosidades')}</span>
             <span style="font-size:10px;color:var(--muted)">${dateStr}</span>
           </div>
-          <div style="font-weight:600;font-size:14px;margin-bottom:3px">${c.titulo||'Sem título'}</div>
-          ${c.passagem?`<div style="font-size:11px;color:var(--accent4);margin-bottom:3px">📖 ${c.passagem}</div>`:''}
-          <div class="nota-preview">${preview}</div>
+          <div style="font-weight:600;font-size:14px;margin-bottom:3px">${esc(c.titulo||'Sem título')}</div>
+          ${c.passagem?`<div style="font-size:11px;color:var(--accent4);margin-bottom:3px">📖 ${esc(c.passagem)}</div>`:''}
+          <div class="nota-preview">${esc(preview)}</div>
         </div>
         <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0">
           <button onclick="event.stopPropagation();openEditCuriosidade(${realIdx})" style="background:none;border:1px solid var(--border);border-radius:8px;padding:4px 8px;font-size:12px;cursor:pointer">✏️</button>
@@ -6442,9 +6529,9 @@
     const catInfo = CUR_CATEGORIAS.find(x => x.val === (c.categoria||'Curiosidades'));
     document.getElementById('ver-nota-conteudo').innerHTML = `
       <div style="margin-bottom:16px">
-        <div style="font-size:11px;font-weight:600;color:${color};text-transform:uppercase;margin-bottom:6px">${catInfo?.icon||''} ${c.categoria||'Curiosidades'}</div>
-        <div style="font-size:20px;font-weight:700;margin-bottom:6px">${c.titulo||'Sem título'}</div>
-        ${c.passagem?`<div style="font-size:13px;color:var(--accent4);margin-bottom:12px">📖 ${c.passagem}</div>`:''}
+        <div style="font-size:11px;font-weight:600;color:${color};text-transform:uppercase;margin-bottom:6px">${catInfo?.icon||''} ${esc(c.categoria||'Curiosidades')}</div>
+        <div style="font-size:20px;font-weight:700;margin-bottom:6px">${esc(c.titulo||'Sem título')}</div>
+        ${c.passagem?`<div style="font-size:13px;color:var(--accent4);margin-bottom:12px">📖 ${esc(c.passagem)}</div>`:''}
         <div style="border-top:1px solid var(--border);padding-top:14px">${renderNotaTexto(c.texto||'')}</div>
       </div>
       <div style="display:flex;gap:8px;margin-top:16px">
@@ -6506,7 +6593,7 @@
         const row = document.createElement('div');
         row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border-top:1px solid var(--border);cursor:pointer';
         row.innerHTML = `
-          <span style="font-size:14px;color:var(--text)">${c.titulo||'Sem título'}</span>
+          <span style="font-size:14px;color:var(--text)">${esc(c.titulo||'Sem título')}</span>
           <span style="font-size:16px;color:var(--muted);flex-shrink:0;margin-left:8px">›</span>`;
         row.onclick = () => openVerNota(realIdx);
         container.appendChild(row);
@@ -6589,9 +6676,9 @@
       return `<div onclick="openVerFavorito(${realIdx})" style="background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--accent4);border-radius:var(--radius);padding:12px 14px;margin-bottom:8px;cursor:pointer">
         <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start">
           <div style="flex:1;min-width:0">
-            <div style="font-size:12px;font-weight:700;color:var(--accent4);margin-bottom:4px">⭐ ${f.ref}</div>
-            ${previewTexto ? `<div style="font-size:13px;font-style:italic;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">"${previewTexto}"</div>` : ''}
-            ${f.nota ? `<div style="font-size:11px;color:var(--muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${_stripInlineMarkup(f.nota)}</div>` : ''}
+            <div style="font-size:12px;font-weight:700;color:var(--accent4);margin-bottom:4px">⭐ ${esc(f.ref)}</div>
+            ${previewTexto ? `<div style="font-size:13px;font-style:italic;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">"${esc(previewTexto)}"</div>` : ''}
+            ${f.nota ? `<div style="font-size:11px;color:var(--muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(_stripInlineMarkup(f.nota))}</div>` : ''}
           </div>
           <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0">
             <button onclick="event.stopPropagation();openEditFavorito(${realIdx})" style="background:none;border:1px solid var(--border);border-radius:8px;padding:4px 8px;font-size:12px;cursor:pointer">✏️</button>
@@ -6607,8 +6694,8 @@
     document.getElementById('ver-nota-conteudo').innerHTML = `
       <div style="margin-bottom:16px">
         <div style="font-size:12px;font-weight:700;color:var(--accent4);text-transform:uppercase;margin-bottom:6px">⭐ Favorito</div>
-        <div style="font-size:20px;font-weight:700;margin-bottom:10px">${f.ref}</div>
-        ${f.texto ? `<div style="font-size:15px;font-style:italic;color:var(--text);line-height:1.6;border-top:1px solid var(--border);padding-top:14px;margin-bottom:12px">"${formatInline(f.texto.replace(/\n/g,'<br>'))}"</div>` : ''}
+        <div style="font-size:20px;font-weight:700;margin-bottom:10px">${esc(f.ref)}</div>
+        ${f.texto ? `<div style="font-size:15px;font-style:italic;color:var(--text);line-height:1.6;border-top:1px solid var(--border);padding-top:14px;margin-bottom:12px">"${formatInline(f.texto).replace(/\n/g,'<br>')}"</div>` : ''}
         ${f.nota ? `<div style="font-size:13px;color:var(--muted)">${renderNotaTexto(f.nota)}</div>` : ''}
       </div>
       <div style="display:flex;gap:8px;margin-top:16px">
@@ -6713,8 +6800,8 @@
     if (!wrap) return;
     wrap.innerHTML = pendingTags.map(t => `
       <span style="display:inline-flex;align-items:center;gap:4px;background:var(--accent);color:white;border-radius:100px;padding:3px 10px;font-size:12px;font-weight:500">
-        ${t}
-        <span onclick="removeIdeiaTag('${t}')" style="cursor:pointer;font-size:14px;line-height:1;margin-left:2px">×</span>
+        ${esc(t)}
+        <span onclick="removeIdeiaTag('${escJs(t)}')" style="cursor:pointer;font-size:14px;line-height:1;margin-left:2px">×</span>
       </span>`).join('');
   }
 
@@ -6724,7 +6811,7 @@
     const all = getAllTags().filter(t => !pendingTags.includes(t));
     if (!all.length) { wrap.innerHTML = ''; return; }
     wrap.innerHTML = '<span style="font-size:11px;color:var(--muted);margin-right:4px">Tags salvas:</span>' +
-      all.map(t => `<span onclick="addSavedTag('${t}')" style="cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:100px;padding:3px 10px;font-size:11px;color:var(--muted)">${t}</span>`).join('');
+      all.map(t => `<span onclick="addSavedTag('${escJs(t)}')" style="cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:100px;padding:3px 10px;font-size:11px;color:var(--muted)">${esc(t)}</span>`).join('');
   }
 
   function saveIdeia() {
@@ -6763,7 +6850,7 @@
     const allTags = getAllTags();
     tagBar.innerHTML = allTags.length ? [
       `<span onclick="setIdeiaTagFilter(null)" style="cursor:pointer;border-radius:100px;padding:4px 12px;font-size:12px;font-weight:500;background:${ideiaTagFilter === null ? 'var(--text)' : 'var(--surface)'};color:${ideiaTagFilter === null ? 'white' : 'var(--muted)'};border:1px solid var(--border)">Todas</span>`,
-      ...allTags.map(t => `<span onclick="setIdeiaTagFilter('${t}')" style="cursor:pointer;border-radius:100px;padding:4px 12px;font-size:12px;font-weight:500;background:${ideiaTagFilter === t ? 'var(--accent)' : 'var(--surface)'};color:${ideiaTagFilter === t ? 'white' : 'var(--muted)'};border:1px solid var(--border)">${t}</span>`)
+      ...allTags.map(t => `<span onclick="setIdeiaTagFilter('${escJs(t)}')" style="cursor:pointer;border-radius:100px;padding:4px 12px;font-size:12px;font-weight:500;background:${ideiaTagFilter === t ? 'var(--accent)' : 'var(--surface)'};color:${ideiaTagFilter === t ? 'white' : 'var(--muted)'};border:1px solid var(--border)">${esc(t)}</span>`)
     ].join('') : '';
 
     // Filter ideias
@@ -6785,12 +6872,12 @@
       const dateStr = d.toLocaleDateString('pt-BR', {day:'numeric', month:'short', year:'numeric'});
       const preview = (idea.texto || '').slice(0, 120) + ((idea.texto||'').length > 120 ? '…' : '');
       const tagsHtml = (idea.tags||[]).map(t =>
-        `<span style="background:var(--accent);color:white;border-radius:100px;padding:2px 8px;font-size:11px;font-weight:500">${t}</span>`
+        `<span style="background:var(--accent);color:white;border-radius:100px;padding:2px 8px;font-size:11px;font-weight:500">${esc(t)}</span>`
       ).join('');
       return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:10px">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px">
           <div style="flex:1">
-            ${idea.titulo ? `<div style="font-weight:600;font-size:14px;margin-bottom:2px">${idea.titulo}</div>` : ''}
+            ${idea.titulo ? `<div style="font-weight:600;font-size:14px;margin-bottom:2px">${esc(idea.titulo)}</div>` : ''}
             <div style="font-size:12px;color:var(--muted)">${dateStr}${idea.editado ? ' · editado' : ''}</div>
           </div>
           <div style="display:flex;gap:4px;flex-shrink:0">
@@ -6798,7 +6885,7 @@
             <button onclick="delIdeia(${realIdx})" style="background:none;border:1px solid #fbddd5;border-radius:8px;padding:4px 8px;font-size:12px;cursor:pointer;color:#E07B54">🗑</button>
           </div>
         </div>
-        ${preview ? `<div style="font-size:13px;color:var(--text);margin-bottom:8px;white-space:pre-wrap">${preview}</div>` : ''}
+        ${preview ? `<div style="font-size:13px;color:var(--text);margin-bottom:8px;white-space:pre-wrap">${esc(preview)}</div>` : ''}
         ${tagsHtml ? `<div style="display:flex;flex-wrap:wrap;gap:4px">${tagsHtml}</div>` : ''}
       </div>`;
     }).join('');
@@ -6933,7 +7020,7 @@
     }
     el.innerHTML = encPresentes.map((n,i) =>
       `<span style="display:inline-flex;align-items:center;gap:4px;background:var(--accent);color:white;border-radius:100px;padding:4px 10px;font-size:12px;font-weight:500">
-        ${nomeAtualDoJovem(n, encPresentesIds[i])}
+        ${esc(nomeAtualDoJovem(n, encPresentesIds[i]))}
         <span onclick="removeEncPresente('${n.replace(/'/g,"\\'")}')" style="cursor:pointer;opacity:0.8;font-size:14px;line-height:1">×</span>
       </span>`
     ).join('');
@@ -6989,14 +7076,14 @@
     const presentes = (enc.presentes || []);
     const presentesIds = enc.presentesIds || [];
     const chips = presentes.length
-      ? presentes.map((n,i) => `<span style="background:var(--bg);border:1px solid var(--border);border-radius:100px;padding:4px 10px;font-size:12px">${nomeAtualDoJovem(n, presentesIds[i])}</span>`).join('')
+      ? presentes.map((n,i) => `<span style="background:var(--bg);border:1px solid var(--border);border-radius:100px;padding:4px 10px;font-size:12px">${esc(nomeAtualDoJovem(n, presentesIds[i]))}</span>`).join('')
       : `<span style="font-size:13px;color:var(--muted)">Nenhum presente registado.</span>`;
     document.getElementById('ver-nota-conteudo').innerHTML = `
       <div style="margin-bottom:16px">
         <div style="font-size:11px;font-weight:600;color:var(--accent3);text-transform:uppercase;margin-bottom:6px">🎉 Encontro</div>
-        <div style="font-size:20px;font-weight:700;margin-bottom:6px">${enc.nome}</div>
+        <div style="font-size:20px;font-weight:700;margin-bottom:6px">${esc(enc.nome)}</div>
         <div style="font-size:13px;color:var(--muted);margin-bottom:14px">📅 ${dateStr}</div>
-        ${enc.notas ? `<div style="font-size:13px;color:var(--muted);font-style:italic;margin-bottom:14px;border-top:1px solid var(--border);padding-top:12px">${enc.notas}</div>` : ''}
+        ${enc.notas ? `<div style="font-size:13px;color:var(--muted);font-style:italic;margin-bottom:14px;border-top:1px solid var(--border);padding-top:12px">${esc(enc.notas)}</div>` : ''}
         <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:8px">👥 Presentes (${presentes.length})</div>
         <div style="display:flex;flex-wrap:wrap;gap:6px">${chips}</div>
       </div>
@@ -7025,8 +7112,8 @@
       const presentes = (enc.presentes || []);
       return `<div onclick="openVerEncontro(${i})" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;gap:10px;cursor:pointer">
         <div style="flex:1;min-width:0">
-          <div style="font-weight:700;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${enc.nome}</div>
-          <div style="font-size:12px;color:var(--muted);margin-top:3px">📅 ${dateStr} · 👥 ${presentes.length} presente${presentes.length !== 1 ? 's' : ''}${enc.notas ? ' · ' + enc.notas : ''}</div>
+          <div style="font-weight:700;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(enc.nome)}</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:3px">📅 ${dateStr} · 👥 ${presentes.length} presente${presentes.length !== 1 ? 's' : ''}${enc.notas ? ' · ' + esc(enc.notas) : ''}</div>
         </div>
         <div style="display:flex;gap:6px;flex-shrink:0">
           <button onclick="event.stopPropagation();openEditEncontro(${i})" style="background:none;border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:13px;cursor:pointer">✏️</button>
@@ -7117,47 +7204,75 @@
     _navPush({ type: 'viagem_detail', idx });
   };
 
+  // Quando um botão "Voltar" da própria app já fechou o ecrã e só precisa de
+  // recuar o histórico, marca isto para o popstate não fazer nada a mais.
+  let _navVoltarJaTratado = false;
+
+  // Um estado do stack está "obsoleto" quando o ecrã a que corresponde já foi
+  // fechado por outro caminho (ex.: botão Fechar do perfil, ou trocar de aba
+  // com um livro aberto). Nesses casos o Voltar deve saltar para o anterior.
+  function _navEstadoObsoleto(st) {
+    if (!st) return false;
+    if (st.type === 'perfil') return !document.getElementById('modal-perfil')?.classList.contains('show');
+    if (st.type === 'livro') return livroAtualIdx === null;
+    if (st.type === 'viagem_detail') return currentViagemIdx === null;
+    return false;
+  }
+
   // Handle Android back button / browser back
   window.addEventListener('popstate', function(e) {
-    _navStack.pop(); // Remove current state
-    const prev = _navStack[_navStack.length - 1];
+    const removido = _navStack.pop(); // estado do ecrã de onde estamos a sair
 
-    // Close any open modal first
-    const openModal = document.querySelector('.modal-overlay.show');
-    if (openModal) {
-      openModal.classList.remove('show');
-      history.pushState({}, ''); // re-add state so next back works
+    if (_navVoltarJaTratado) { _navVoltarJaTratado = false; return; }
+
+    // 1) Um modal aberto (que não seja o próprio perfil a fechar) fecha-se primeiro.
+    //    O estado retirado é reposto, para o stack continuar alinhado com o histórico.
+    const abertos = document.querySelectorAll('.modal-overlay.show');
+    const modalTopo = abertos[abertos.length - 1];
+    const fechaPerfil = removido && removido.type === 'perfil' && modalTopo && modalTopo.id === 'modal-perfil';
+    if (modalTopo && !fechaPerfil) {
+      modalTopo.classList.remove('show');
+      if (removido) _navStack.push(removido);
+      history.pushState(removido || {}, '');
       return;
     }
 
-    if (!prev) {
-      // Stack empty — go home
+    // 2) Estado já fechado por outro caminho → salta para o anterior
+    if (_navEstadoObsoleto(removido) && _navStack.length > 0) {
+      history.back();
+      return;
+    }
+
+    // 3) Fecha o ecrã de onde estamos a sair
+    if (removido) {
+      if (removido.type === 'viagem_detail') { _origCloseViagemDetail(); return; }
+      if (removido.type === 'livro')         { fecharLivro(); return; }
+      if (removido.type === 'perfil')        { closeModal('modal-perfil'); return; }
+    }
+
+    // 4) Saímos de uma aba → volta à aba anterior (ou ao início)
+    let abaAnterior = null;
+    for (let i = _navStack.length - 1; i >= 0; i--) {
+      if (_navStack[i].type === 'tab') { abaAnterior = _navStack[i].name; break; }
+    }
+    if (!abaAnterior) {
+      // Stack vazio — vai para o início
+      _navStack.length = 0;
       _origSwitchTab(HOME_TAB);
       _navPush({ type: 'tab', name: HOME_TAB });
       return;
     }
-
-    if (prev.type === 'tab') {
-      _origSwitchTab(prev.name);
-    } else if (prev.type === 'viagem_list') {
-      closeViagemDetail();
-    } else if (prev.type === 'viagem_detail') {
-      _origOpenViagemDetail(prev.idx);
-    } else if (prev.type === 'livro') {
-      fecharLivro();
-    } else if (prev.type === 'perfil') {
-      closeModal('modal-perfil');
-    }
+    _origSwitchTab(abaAnterior);
   });
 
-  // Also intercept closeViagemDetail to pop stack
+  // Botão "‹ Voltar" do detalhe da viagem: fecha logo o detalhe e recua
+  // uma única posição no histórico (antes recuava duas e ia parar à Agenda).
   const _origCloseViagemDetail = closeViagemDetail;
   closeViagemDetail = function() {
     _origCloseViagemDetail();
-    // Let popstate handle stack, but if called directly (Voltar button), simulate back
     if (_navStack.length > 0 && _navStack[_navStack.length-1]?.type === 'viagem_detail') {
-      _navStack.pop();
-      history.back();
+      _navVoltarJaTratado = true;
+      history.back(); // o popstate retira o estado do stack e não faz mais nada
     }
   };
 
