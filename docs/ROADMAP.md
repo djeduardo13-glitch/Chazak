@@ -71,8 +71,11 @@ Regole che valgono ovunque:
 - Guida passo per passo: acquisto, record DNS (A e CNAME per GitHub Pages), Custom domain ed Enforce HTTPS su GitHub, verifica del dominio, aggiornamento di Site URL e Redirect URLs in Supabase Auth.
 - Cambiando indirizzo l'app installata va reinstallata e il localStorage riparte vuoto; con il login i dati tornano dalla nuvola. Va fatto **prima** di dare l'app agli altri.
 
-### 6. Privacy (urgente, ancora aperto)
-- Nomi e compleanni dei ragazzi non sono più nel codice, ma sono ancora nei **commit vecchi** della repo, che è pubblica. Spiegare con calma le due opzioni (riscrivere la cronologia con `git filter-repo`, oppure ricreare la repo da zero), con pro, contro e rischi, e aiutare a farlo.
+### 6. Privacy
+- ✅ **Fatto il 20/10/2026.** I dati dei ragazzi (62 nomi con categoria e compleanno) erano in 37 dei 54 commit vecchi. Scelta fatta: **repo ricreata da zero** (non `git filter-repo`, perché le PR conservavano la storia vecchia e GitHub non permette di cancellarle da soli). La repo nuova ha lo stesso nome, quindi stesso indirizzo e stessi dati sui telefoni, e parte da un solo commit "Chazak v5.8.0". Verificato che i commit vecchi e le PR #1/#2 non sono più raggiungibili.
+- La cartella di lavoro è ora `Documenti\GitHub\Chazak-pulito`. La vecchia `Documenti\GitHub\Chazak` contiene ancora la storia con i dati: è un archivio privato, **scollegato da GitHub**, e non va **mai** più caricata online.
+- GitHub conserva per 90 giorni una copia ripristinabile della repo cancellata, visibile solo a Eduardo: non ripristinarla.
+- Il Gist "segreto" del backup non è davvero privato: chiunque abbia il link può aprirlo. Non condividerlo, e ripensare il backup Gist dopo le fasi D–E.
 - Con più persone che vedono dati di minori, ricordare le buone pratiche: accesso solo a chi serve, disattivare subito chi non serve più.
 
 ### 7. Piccoli miglioramenti (alla fine)
@@ -88,7 +91,7 @@ Regole che valgono ovunque:
 | Fase | Contenuto | Stato |
 |---|---|---|
 | A | Salvare questo riassunto in `docs/ROADMAP.md` | ✅ fatto |
-| B | Pulizia della cronologia (privacy) | da fare |
+| B | Pulizia della cronologia (privacy) | ✅ fatto (repo ricreata) |
 | C | Dominio | da fare |
 | D | Database: tabelle e RLS | da fare |
 | E | Migrazione dei dati di Eduardo | da fare |
