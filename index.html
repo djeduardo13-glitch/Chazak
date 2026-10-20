@@ -1,0 +1,1147 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Chazak</title>
+  <meta name="description" content="Chazak — app pessoal de Eduardo R. para organização da mocidade CCB." />
+  <meta name="theme-color" content="#3A6EA8" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Chazak" />
+  <!-- Manifest real (FASE 2 — PWA Offline) -->
+  <link rel="manifest" href="./manifest.json" />
+  <!-- Favicon emoji 🌾 via SVG -->
+<link rel="icon" href="./icon-192.png" />
+<link rel="apple-touch-icon" href="./icon-192.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./css/style.css">
+  <script defer src="./js/core.js"></script>
+  <script defer src="./js/mocidade.js"></script>
+  <script defer src="./js/palavras.js"></script>
+  <script defer src="./js/agenda.js"></script>
+  <script defer src="./js/biblia.js"></script>
+  <script defer src="./js/gist.js"></script>
+  <script defer src="./js/nuvem.js"></script>
+  <script defer src="./js/dados.js"></script>
+  <script defer src="./js/navegacao.js"></script>
+  <script defer src="./js/boot.js"></script>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- HEADER -->
+  <header>
+    <div class="header-icon" onclick="mostrarAniversariosHoje()">🌾<span class="header-badge" id="header-icon-badge"></span></div>
+    <div style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0">
+      <span style="font-size:10px;color:rgba(255,255,255,0.6);font-weight:500;letter-spacing:0.8px;text-transform:uppercase" id="header-date"></span>
+      <span class="header-title">Eduardo R.</span>
+      <span id="header-verse" style="font-size:10px;color:rgba(255,255,255,0.6);font-weight:400;font-style:italic;line-height:1.4;display:block">1Jo 2:14 "Jovens, sois fortes, e a palavra de Deus permanece em vós"</span>
+    </div>
+  </header>
+
+  <!-- MAIN CONTENT -->
+  <main>
+
+    <!-- ── MOCIDADE ── -->
+    <section id="sec-mocidade" class="section">
+      <div class="section-header">
+        <div class="section-label">Jovens</div>
+        <div class="section-title"><span>Mo</span>cidade</div>
+      </div>
+
+      <!-- Sub-tabs -->
+      <div class="moc-inner-tabs">
+        <div class="moc-inner-tab active" onclick="setMocTab(this,'tracker')" title="Tracker">👥</div>
+        <div class="moc-inner-tab" onclick="setMocTab(this,'presenca')" title="Presença">🙋</div>
+        <div class="moc-inner-tab" onclick="setMocTab(this,'viagens')" title="Viagens">✈️</div>
+        <div class="moc-inner-tab" onclick="setMocTab(this,'encontros')" title="Encontros">🎉</div>
+        <div class="moc-inner-tab" onclick="setMocTab(this,'ideias')" title="Ideias">💡</div>
+      </div>
+
+      <!-- ── TRACKER ── -->
+      <div id="moc-tracker">
+        <div class="moc-stats">
+          <div class="moc-stat"><div class="moc-stat-num" id="ms-total">0</div><div class="moc-stat-label">Total</div></div>
+          <div class="moc-stat" onclick="filterByAtencao()" style="cursor:pointer" id="ms-alert-box"><div class="moc-stat-num" id="ms-alert" style="color:#E07B54">0</div><div class="moc-stat-label">Atenção ⚠️</div></div>
+          <div class="moc-stat"><div class="moc-stat-num" id="ms-ok">0</div><div class="moc-stat-label">Em dia</div></div>
+        </div>
+
+        <div class="search-wrap"><input type="text" id="moc-search" placeholder="Buscar jovem..." oninput="renderTracker()"></div>
+
+        <div class="filter-row" style="margin-bottom:10px">
+            <div class="filter-chip active" onclick="setMocFilter(this,'todos')">Todos</div>
+            <div class="filter-chip" onclick="setMocFilter(this,'Jovem Moça')">Moças +12</div>
+            <div class="filter-chip" onclick="setMocFilter(this,'Criança Menina')">Meninas +6</div>
+            <div class="filter-chip" onclick="setMocFilter(this,'Menina menor de 6')">Meninas -6</div>
+            <div class="filter-chip" onclick="setMocFilter(this,'Jovem Moço')">Moços +12</div>
+            <div class="filter-chip" onclick="setMocFilter(this,'Criança Menino')">Meninos +6</div>
+            <div class="filter-chip" onclick="setMocFilter(this,'Menino menor de 6')">Meninos -6</div>
+            <div class="filter-chip" onclick="setMocFilter(this,'atencao')">⚠️</div>
+          </div>
+
+        <div id="tracker-list"></div>
+      </div>
+
+      <!-- ── PRESENÇA (RDJ) ── -->
+      <div id="moc-presenca" style="display:none">
+        <div class="filter-row" style="margin-bottom:14px">
+          <div class="filter-chip active" id="pres-subtab-sessoes" onclick="setPresencaSubTab('sessoes')">📋 Sessões</div>
+          <div class="filter-chip" id="pres-subtab-ranking" onclick="setPresencaSubTab('ranking')">📊 Ranking</div>
+        </div>
+
+        <!-- SESSÕES -->
+        <div id="presenca-sessoes-view">
+          <div id="presenca-sessoes-list"></div>
+        </div>
+
+        <!-- RANKING -->
+        <div id="presenca-ranking-view" style="display:none">
+          <div class="filter-row" style="margin-bottom:12px">
+            <div class="filter-chip active" onclick="setRankingFilter(this,'todos')">Todos</div>
+            <div class="filter-chip" onclick="setRankingFilter(this,'jovens')">Jovem Moça &amp; Moço</div>
+          </div>
+          <div id="presenca-ranking-list"></div>
+        </div>
+      </div>
+
+      <!-- ── VIAGENS ── -->
+      <div id="moc-viagens" style="display:none">
+        <!-- LIST VIEW -->
+        <div id="viagens-list-view">
+          <div id="viagens-list"></div>
+        </div>
+        <!-- DETAIL VIEW (shown when a trip is open) -->
+        <div id="viagem-detail-view" style="display:none"></div>
+      </div>
+
+      <!-- ── ENCONTROS ── -->
+      <div id="moc-encontros" style="display:none">
+        <div id="encontros-list"></div>
+      </div>
+
+      <!-- ── IDEIAS ── -->
+      <div id="moc-ideias" style="display:none">
+        <!-- Tag filter bar -->
+        <div id="ideias-tag-bar" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px"></div>
+        <!-- Cards list -->
+        <div id="ideias-list"></div>
+      </div>
+    </section>
+
+
+    <!-- ── SERVIÇOS ── -->
+    <section id="sec-servicos" class="section">
+      <div class="section-header">
+        <div class="section-label">Registro</div>
+        <div class="section-title"><span>Pa</span>lavras</div>
+      </div>
+
+      <!-- Filtros por tipo de serviço -->
+      <div class="filter-row" style="margin-bottom:12px">
+        <div class="filter-chip active" onclick="setServTipo(this,'todos')">Todos</div>
+        <div class="filter-chip" onclick="setServTipo(this,'Culto')">Culto</div>
+        <div class="filter-chip" onclick="setServTipo(this,'RDJ')">RDJ</div>
+        <div class="filter-chip" onclick="setServTipo(this,'RDM')">RDM</div>
+        <div class="filter-chip" onclick="setServTipo(this,'Batismo')">Batismo</div>
+        <div class="filter-chip" onclick="setServTipo(this,'RMN')">RMN</div>
+        <div class="filter-chip" onclick="setServTipo(this,'RMA')">RMA</div>
+        <div class="filter-chip" onclick="setServTipo(this,'RGI')">RGI</div>
+        <div class="filter-chip" onclick="setServTipo(this,'Busca dos Dons')">Busca dos Dons</div>
+        <div class="filter-chip" onclick="setServTipo(this,'S. Ceia')">S. Ceia</div>
+        <div class="filter-chip" onclick="setServTipo(this,'Outro')">Outro</div>
+      </div>
+
+      <div id="servicos-list"></div>
+    </section>
+
+    <!-- ── AGENDA ── -->
+    <section id="sec-agenda" class="section">
+      <div class="section-header">
+        <div class="section-label">Calendário</div>
+        <div class="section-title"><span>Ag</span>enda</div>
+      </div>
+
+      <!-- Mini calendário -->
+      <div class="agenda-month">
+        <span class="agenda-month-label" id="cal-month-label"></span>
+        <div class="agenda-nav">
+          <button onclick="changeMonth(-1)">‹</button>
+          <button onclick="changeMonth(1)">›</button>
+        </div>
+      </div>
+      <div class="cal-grid" id="cal-grid"></div>
+
+      <!-- Filter + add -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div class="filter-row" style="margin-bottom:0;flex:1;overflow-x:auto">
+          <div class="filter-chip active" onclick="setAgendaFilter(this,'todos')">Todos</div>
+          <div class="filter-chip" onclick="setAgendaFilter(this,'RDM')">RDM</div>
+          <div class="filter-chip" onclick="setAgendaFilter(this,'RMA')">RMA</div>
+          <div class="filter-chip" onclick="setAgendaFilter(this,'RMN')">RMN</div>
+          <div class="filter-chip" onclick="setAgendaFilter(this,'Ministerial')">Ministerial</div>
+          <div class="filter-chip" onclick="setAgendaFilter(this,'Batismo')">Batismo</div>
+          <div class="filter-chip" onclick="setAgendaFilter(this,'Busca dos Dons')">Busca dos Dons</div>
+          <div class="filter-chip" onclick="setAgendaFilter(this,'Culto')">Culto</div>
+          <div class="filter-chip" onclick="setAgendaFilter(this,'Santa Ceia')">S. Ceia</div>
+          <div class="filter-chip" onclick="setAgendaFilter(this,'RGI')">RGI</div>
+        </div>
+        <button onclick="openNovoEvento()" style="flex-shrink:0;margin-left:10px;background:var(--sec);color:white;border:none;border-radius:100px;padding:7px 14px;font-size:13px;font-weight:500;cursor:pointer">+ Novo</button>
+      </div>
+
+      <div id="agenda-list"></div>
+    </section>
+
+    <!-- ── BÍBLIA ── -->
+    <section id="sec-biblia" class="section">
+      <div class="section-header">
+        <div class="section-label">Pessoal</div>
+        <div class="section-title"><span>Bí</span>blia</div>
+      </div>
+
+      <div class="verse-banner">
+        <div class="verse-text">"A tua palavra é lâmpada para os meus pés e luz para o meu caminho."</div>
+        <div class="verse-ref">Salmos 119:105</div>
+      </div>
+
+      <div class="inner-tabs">
+        <div class="inner-tab active" onclick="setBibliaTab(this, 'livros')" title="Leitura">📖</div>
+        <div class="inner-tab" onclick="setBibliaTab(this, 'curiosidades')" title="Curiosidades">🧐</div>
+        <div class="inner-tab" onclick="setBibliaTab(this, 'favoritos')" title="Favoritos">⭐</div>
+        <div class="inner-tab" onclick="setBibliaTab(this, 'ondeescrito')" title="Onde está escrito">📍</div>
+      </div>
+
+      <div id="biblia-leitura" style="display:none">
+        <div class="filter-row" style="margin-bottom:12px">
+          <div class="filter-chip active" onclick="setLeituraFilter(this,'todos')">Todas</div>
+          <div class="filter-chip" onclick="setLeituraFilter(this,'AT')">A.T.</div>
+          <div class="filter-chip" onclick="setLeituraFilter(this,'NT')">N.T.</div>
+        </div>
+        <div id="leitura-list"></div>
+      </div>
+
+      <!-- ── LIVROS ── -->
+      <div id="biblia-livros">
+        <!-- Vista: lista de livros -->
+        <div id="livros-lista-view">
+          <div style="position:relative;margin-bottom:10px">
+            <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:14px;color:var(--muted)">🔍</span>
+            <input id="livros-busca" type="text" placeholder="Buscar livro..."
+              style="width:100%;padding:9px 12px 9px 34px;border-radius:12px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;box-sizing:border-box"
+              oninput="renderLivros()">
+          </div>
+          <div class="filter-row" style="margin-bottom:12px">
+            <div class="filter-chip active" onclick="setLivrosFiltro(this,'todos')">Todos</div>
+            <div class="filter-chip" onclick="setLivrosFiltro(this,'AT')">A.T.</div>
+            <div class="filter-chip" onclick="setLivrosFiltro(this,'NT')">N.T.</div>
+          </div>
+          <div id="livros-list"></div>
+        </div>
+        <!-- Vista: detalhe de um livro -->
+        <div id="livros-detalhe-view" style="display:none">
+          <div id="livros-detalhe-conteudo"></div>
+        </div>
+      </div>
+
+      <div id="biblia-planner" style="display:none">
+        <div style="margin-bottom:16px">
+          <div style="font-family:'Lora',serif;font-size:16px;font-weight:600;margin-bottom:4px">Planner de Leitura</div>
+          <div style="font-size:13px;color:var(--muted)">Organize sua leitura bíblica anual</div>
+        </div>
+        <!-- Barra de progresso geral -->
+        <div class="card" style="margin-bottom:16px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+            <span style="font-size:13px;font-weight:500">Progresso geral</span>
+            <span style="font-size:13px;color:var(--accent4);font-weight:600" id="planner-pct">0%</span>
+          </div>
+          <div style="background:var(--border);border-radius:100px;height:8px;overflow:hidden">
+            <div id="planner-bar" style="height:100%;background:var(--accent4);border-radius:100px;width:0%;transition:width 0.4s ease"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-top:8px">
+            <span style="font-size:11px;color:var(--muted)" id="planner-done">0 livros lidos</span>
+            <span style="font-size:11px;color:var(--muted)">de 66</span>
+          </div>
+        </div>
+        <!-- Lista de livros por testamento -->
+        <div id="planner-list"></div>
+      </div>
+
+      <div id="biblia-curiosidades" style="display:none">
+        <!-- Busca -->
+      <div style="position:relative;margin-bottom:10px">
+        <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:14px;color:var(--muted)">🔍</span>
+        <input id="cur-busca-input" type="text" placeholder="Buscar notas..."
+          style="width:100%;padding:9px 12px 9px 34px;border-radius:12px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;box-sizing:border-box"
+          oninput="curBusca=this.value;renderCuriosidades()">
+      </div>
+      <!-- Chips de categoria -->
+      <div id="curiosidades-tag-bar" class="filter-row" style="margin-bottom:12px"></div>
+      <div id="curiosidades-list"></div>
+      </div>
+
+      <div id="biblia-favoritos" style="display:none">
+        <div class="search-wrap" style="margin-bottom:12px"><input type="text" id="fav-search" placeholder="Buscar versículo..." oninput="renderFavoritos()"></div>
+        <div id="favoritos-list"></div>
+      </div>
+
+      <div id="biblia-ondeescrito" style="display:none">
+        <div style="position:relative;margin-bottom:10px">
+          <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:14px;color:var(--muted)">🔍</span>
+          <input id="oee-busca-input" type="text" placeholder="Buscar tópico..."
+            style="width:100%;padding:9px 12px 9px 34px;border-radius:12px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;box-sizing:border-box"
+            oninput="oeeBusca=this.value;renderOndeEstaEscrito()">
+        </div>
+        <div style="position:relative;padding-right:24px">
+          <div id="oee-list" style="border-radius:var(--radius);border:1px solid var(--border)"></div>
+          <div id="oee-az-nav" style="position:absolute;right:0;top:0;bottom:0;display:flex;flex-direction:column;justify-content:center;gap:1px;padding:8px 0"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── DADOS ── -->
+    <section id="sec-dados" class="section">
+      <div class="section-header">
+        <div class="section-label">Configurações</div>
+        <div class="section-title"><span>Da</span>dos</div>
+      </div>
+
+      <!-- SOBRE O APP -->
+      <div class="dados-section">
+        <div class="dados-title">📱 Sobre o app</div>
+        <div class="card" style="display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:13px;color:var(--muted)">Versão</span>
+            <span style="font-size:13px;font-weight:500">5.8.0</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:13px;color:var(--muted)">Jovens ativos</span>
+            <span style="font-size:13px;font-weight:500" id="stat-jovens">0</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:13px;color:var(--muted)">Inativos</span>
+            <span style="font-size:13px;font-weight:500" id="stat-inativos">0</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 📍 CONTEÚDO -->
+      <div class="dados-group-label">📍 Conteúdo</div>
+      <div class="dados-section">
+        <div class="card" style="padding:0">
+          <div class="toggle-header closed" id="luoghi-header" onclick="toggleLuoghiPanel()" style="margin-bottom:0;padding:14px 16px">
+            <span class="toggle-header-label">📍 Localidades</span>
+            <i class="toggle-chevron" id="luoghi-arrow">▾</i>
+          </div>
+          <div id="luoghi-panel" style="display:none;padding:0 16px 14px">
+            <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Aparecem nos selects de Local em toda a app.</div>
+            <div style="display:flex;gap:8px;margin-bottom:12px">
+              <input class="form-input" type="text" id="new-luogo-input" placeholder="Nova localidade..." style="flex:1;font-size:13px" onkeydown="if(event.key==='Enter'){event.preventDefault();addLuogo()}">
+              <button onclick="addLuogo()" style="background:var(--accent);color:white;border:none;border-radius:var(--radius);padding:0 16px;font-size:13px;cursor:pointer;white-space:nowrap">+ Add</button>
+            </div>
+            <div id="luoghi-list" style="display:flex;flex-direction:column;gap:6px;max-height:300px;overflow-y:auto"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ☁️ NUVEM (Supabase) — login + sincronização automática -->
+      <div class="dados-group-label">☁️ Nuvem</div>
+      <div class="dados-section">
+        <div class="card" style="padding:14px 16px">
+          <div id="sb-logged-out">
+            <div style="font-size:13px;color:var(--muted);line-height:1.5;margin-bottom:12px">Entra com a tua conta para guardar tudo na nuvem e sincronizar entre dispositivos.</div>
+            <input class="form-input" type="email" id="sb-email" placeholder="Email" autocomplete="username" style="margin-bottom:8px">
+            <input class="form-input" type="password" id="sb-pass" placeholder="Palavra-passe" autocomplete="current-password" style="margin-bottom:10px">
+            <button class="btn-save" id="sb-login-btn" style="width:100%" onclick="sbEntrar('sb-email','sb-pass','sb-login-btn')">Entrar</button>
+          </div>
+          <div id="sb-logged-in" style="display:none">
+            <div id="sb-user" style="font-size:13px;font-weight:500;margin-bottom:4px"></div>
+            <div id="sb-status" style="font-size:12px;color:var(--muted);margin-bottom:12px"></div>
+            <div class="dados-row">
+              <button class="btn-outline" onclick="sbSincronizarAgora()">🔄 Sincronizar agora</button>
+              <button class="btn-outline" style="color:#E07B54;border-color:#fbddd5" onclick="sbSair()">Sair</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 💾 DADOS (Backup) — JSON + Gist, no fundo da página -->
+      <div class="dados-group-label">💾 Dados</div>
+      <div class="dados-section">
+        <div class="card" style="padding:14px 16px">
+          <div class="dados-row">
+            <button class="btn-outline" onclick="exportData()">⬇ Exportar JSON</button>
+            <button class="btn-outline" onclick="importData()">⬆ Importar JSON</button>
+          </div>
+          <div class="toggle-header closed" id="histimport-header" onclick="togglePanel('histimport')" style="margin:12px 0 0;border-top:1px solid var(--border);padding-top:12px">
+            <span class="toggle-header-label" style="font-size:13px;color:var(--muted)">🕓 Histórico de importações</span>
+            <i class="toggle-chevron" id="histimport-arrow">▾</i>
+          </div>
+          <div id="histimport-panel" style="display:none;padding-top:10px">
+            <div id="histimport-list"></div>
+          </div>
+
+          <div id="gist-token-status" style="font-size:13px;font-weight:500;margin:16px 0 10px;border-top:1px solid var(--border);padding-top:14px">Nenhum token configurado</div>
+
+          <div class="toggle-header closed" id="gisttoken-header" onclick="togglePanel('gisttoken')" style="margin-bottom:0">
+            <span class="toggle-header-label" style="font-size:13px;color:var(--muted)">🔑 Configurar token do GitHub</span>
+            <i class="toggle-chevron" id="gisttoken-arrow">▾</i>
+          </div>
+          <div id="gisttoken-panel" style="display:none;padding-top:10px">
+            <input class="form-input" type="password" id="gist-token-input" placeholder="github_pat_..." style="margin-bottom:8px" autocomplete="off">
+            <div style="display:flex;gap:8px">
+              <button class="btn-outline" style="flex:1" onclick="saveGistToken()">💾 Guardar token</button>
+              <button class="btn-outline" style="flex:1;color:#E07B54;border-color:#fbddd5" onclick="removeGistToken()">🗑 Remover</button>
+            </div>
+            <div id="gist-link-wrap" style="display:none;margin-top:14px;border-top:1px solid var(--border);padding-top:14px">
+              <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Ligar manualmente a um Gist existente (link ou ID):</div>
+              <input class="form-input" type="text" id="gist-link-input" placeholder="https://gist.github.com/.../abc123..." style="margin-bottom:8px" autocomplete="off">
+              <button class="btn-outline" style="width:100%" onclick="ligarGistManual()">🔗 Ligar este Gist</button>
+            </div>
+          </div>
+
+          <div class="dados-row" style="margin-top:14px">
+            <button class="btn-outline" id="gist-backup-btn" onclick="backupToGist()">☁️ Backup no Gist</button>
+            <button class="btn-outline" id="gist-restore-btn" onclick="restoreFromGist()">⬇️ Restaurar do Gist</button>
+          </div>
+          <div id="gist-last-backup" style="font-size:11px;color:var(--muted);margin-top:8px"></div>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- FAB -->
+  <button class="fab visible" id="fab-btn" onclick="openFab()">+</button>
+  <!-- Scroll to top -->
+  <button class="scroll-top-btn" id="scroll-top-btn" onclick="scrollToTop()" title="Voltar ao topo">↑</button>
+
+  <!-- BOTTOM TABS -->
+  <nav>
+    <div class="tab" id="tab-mocidade" onclick="switchTab('mocidade')">
+      <span class="tab-icon">👥</span>
+      <span class="tab-label">Mocidade</span>
+    </div>
+    <div class="tab" id="tab-servicos" onclick="switchTab('servicos')">
+      <span class="tab-icon">🙏</span>
+      <span class="tab-label">Palavras</span>
+    </div>
+    <div class="tab active" id="tab-agenda" onclick="switchTab('agenda')">
+      <span class="tab-icon">📅</span>
+      <span class="tab-label">Agenda</span>
+    </div>
+    <div class="tab" id="tab-biblia" onclick="switchTab('biblia')">
+      <span class="tab-icon">📖</span>
+      <span class="tab-label">Bíblia</span>
+    </div>
+    <div class="tab" id="tab-dados" onclick="switchTab('dados')">
+      <span class="tab-icon">⚙️</span>
+      <span class="tab-label">Dados</span>
+    </div>
+  </nav>
+
+</div><!-- /#app -->
+
+<!-- ── MODAIS (fora do #app para evitar clipping) ── -->
+
+<!-- MODAL: NOVA / EDITAR IDEIA -->
+<div class="modal-overlay" id="modal-ideia">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="ideia-modal-title">Nova Ideia</div>
+    <div class="form-field">
+      <label class="form-label">Título <span style="font-weight:400;color:var(--muted)">(opcional)</span></label>
+      <input class="form-input" type="text" id="ideia-titulo" placeholder="Título breve...">
+    </div>
+    <div class="form-field">
+      <label class="form-label">Nota</label>
+      <textarea class="form-input" id="ideia-texto" placeholder="Escreve aqui a ideia..." rows="5" style="resize:vertical;font-family:inherit"></textarea>
+    </div>
+    <div class="form-field">
+      <label class="form-label">Tags</label>
+      <div id="ideia-tags-wrap" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px"></div>
+      <div style="display:flex;gap:6px">
+        <input class="form-input" type="text" id="ideia-tag-input" placeholder="Nova tag..." style="flex:1" onkeydown="if(event.key==='Enter'){event.preventDefault();addIdeiaTag()}">
+        <button onclick="addIdeiaTag()" style="background:var(--accent);color:white;border:none;border-radius:var(--radius);padding:0 14px;font-size:13px;cursor:pointer;white-space:nowrap">+ Tag</button>
+      </div>
+      <!-- Saved tags suggestions -->
+      <div id="ideia-tags-saved" style="display:flex;flex-wrap:wrap;gap:5px;margin-top:8px"></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-cancel" onclick="closeModal('modal-ideia')">Cancelar</button>
+      <button class="btn-save" onclick="saveIdeia()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: ADD JOVEM -->
+<div class="modal-overlay" id="modal-jovem">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Novo Jovem</div>
+    <div class="form-field"><label class="form-label">Nome</label><input class="form-input" type="text" id="nj-nome" placeholder="Nome completo"></div>
+    <div class="form-field">
+      <label class="form-label">Gênero</label>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px">
+        <button type="button" id="nj-gen-f" onclick="selectGenero('F')"
+          style="padding:14px;border-radius:var(--radius);border:2px solid var(--border);background:var(--surface);font-size:15px;font-weight:600;cursor:pointer;transition:all 0.15s;color:var(--muted)">
+          👧 Menina
+        </button>
+        <button type="button" id="nj-gen-m" onclick="selectGenero('M')"
+          style="padding:14px;border-radius:var(--radius);border:2px solid var(--border);background:var(--surface);font-size:15px;font-weight:600;cursor:pointer;transition:all 0.15s;color:var(--muted)">
+          👦 Menino
+        </button>
+      </div>
+    </div>
+    <div class="form-field"><label class="form-label">Aniversário (dd/mm/aaaa)</label><input class="form-input" type="text" id="nj-aniv" placeholder="ex: 24/10/2008" oninput="formatAnivInput(this)" maxlength="10"></div>
+    <div id="nj-grupo-preview" style="font-size:12px;color:var(--accent3);padding:4px 0 8px 2px;display:none"></div>
+    <div class="form-field"><label class="form-label">Batismo (dd/mm/aaaa) <span style="font-weight:400;color:var(--muted)">(opcional)</span></label><input class="form-input" type="text" id="nj-batismo" placeholder="ex: 12/06/2018" oninput="formatDateSimples(this)" maxlength="10"></div>
+    <div class="form-field"><label class="form-label">Telefone</label><input class="form-input" type="text" id="nj-tel" placeholder="+39 ..."></div>
+    <div class="form-field"><label class="form-label">Observações</label><input class="form-input" type="text" id="nj-obs" placeholder="Notas livres..."></div>
+    <div class="form-field">
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px;font-weight:500">
+        <input type="checkbox" id="nj-ativo" checked style="width:18px;height:18px;accent-color:var(--accent);cursor:pointer">
+        <span>Na Mocidade</span>
+      </label>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px;margin-left:28px">Desmarcado → salvo no banco mas fora do tracker</div>
+    </div>
+    <div class="form-actions"><button class="btn-cancel" onclick="closeModal('modal-jovem')">Cancelar</button><button class="btn-save" onclick="saveJovem()">Salvar</button></div>
+  </div>
+</div>
+
+<!-- MODAL: ADD VIAGEM -->
+<div class="modal-overlay" id="modal-viagem">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Nova Viagem</div>
+    <!-- Destino -->
+    <div class="form-field">
+      <label class="form-label">Destino</label>
+      <div class="ac-wrap">
+        <input class="form-input" type="text" id="nv-dest-input" placeholder="Buscar ou escrever destino..." autocomplete="off"
+          oninput="acLocal(this,'ac-nv-local')" onfocus="acLocal(this,'ac-nv-local')" onblur="setTimeout(()=>hideAc('ac-nv-local'),200)">
+        <div class="ac-dropdown" id="ac-nv-local" style="display:none"></div>
+      </div>
+    </div>
+    <!-- Evento autocomplete -->
+    <div class="form-field">
+      <label class="form-label">Evento <span style="font-weight:400;color:var(--muted)">(opcional)</span></label>
+      <div class="ac-wrap">
+        <input class="form-input" type="text" id="nv-evento-input" placeholder="Buscar evento ou escrever..." autocomplete="off"
+          oninput="acEvento(this.value)" onfocus="acEvento(this.value)" onblur="setTimeout(()=>hideAc('ac-evento'),200)">
+        <div class="ac-dropdown" id="ac-evento" style="display:none"></div>
+      </div>
+    </div>
+    <!-- Datas -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="form-field"><label class="form-label">Ida</label><input class="form-input" type="date" id="nv-data-ida" onchange="const vv=document.getElementById('nv-data-volta');if(!vv.value)vv.value=this.value;"></div>
+      <div class="form-field" id="nv-volta-wrap"><label class="form-label">Volta</label><input class="form-input" type="date" id="nv-data-volta"></div>
+    </div>
+    <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);margin-top:-8px;margin-bottom:14px;cursor:pointer">
+      <input type="checkbox" id="nv-mesmo-dia" onchange="document.getElementById('nv-volta-wrap').style.opacity=this.checked?'0.3':'1'"> Mesmo dia (sem pernoite)
+    </label>
+    <div class="form-actions">
+      <button class="btn-cancel" onclick="closeModal('modal-viagem')">Cancelar</button>
+      <button class="btn-save" onclick="saveViagem()">Criar viagem →</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: PESSOA PICKER (convidados / passageiros) -->
+<div class="modal-overlay" id="modal-pessoa">
+  <div class="modal-sheet" style="max-height:80vh;padding:16px 20px 24px;display:flex;flex-direction:column;">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="pessoa-modal-title" style="margin-bottom:12px">Adicionar pessoa</div>
+
+    <!-- Sugestões ficam ACIMA do input, crescem para cima -->
+    <div id="ac-pessoa-wrap" style="flex:1;overflow-y:auto;min-height:0;margin-bottom:8px;">
+      <div id="ac-pessoa" style="display:none;"></div>
+      <div id="pessoa-empty" style="font-size:13px;color:var(--muted);padding:8px 0">Começa a escrever para buscar...</div>
+    </div>
+
+    <!-- Input FIXO em baixo — nunca sobe -->
+    <div>
+      <input class="form-input" type="text" id="pessoa-search" placeholder="Buscar nome..."
+        autocomplete="off" oninput="acPessoa(this.value)" onfocus="acPessoa(this.value)"
+        style="font-size:15px;margin-bottom:8px">
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px">
+        <input class="form-input" type="text" id="pessoa-outro" placeholder="Nome externo..." style="flex:1;font-size:14px"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();addPessoaOutro()}">
+        <button onclick="addPessoaOutro()" style="background:var(--accent);color:white;border:none;border-radius:100px;padding:0 16px;height:46px;font-size:13px;cursor:pointer;white-space:nowrap">+ Add</button>
+      </div>
+      <button class="btn-cancel" style="width:100%" onclick="closeModal('modal-pessoa')">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: EDIT INTERAÇÃO -->
+<div class="modal-overlay" id="modal-edit-inter">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">✏️ Editar Interação</div>
+    <div class="form-field">
+      <label class="form-label">Tipo</label>
+      <select class="form-input" id="ei-tipo">
+        <option value="presente">🎁 Presente</option>
+        <option value="conversa">💬 Conversa</option>
+        <option value="viagem">✈️ Viagem</option>
+        <option value="outro">📝 Outro</option>
+        <option value="Outro">📝 Outro (encontro)</option>
+      </select>
+    </div>
+    <div class="form-field">
+      <label class="form-label">Data</label>
+      <input class="form-input" type="date" id="ei-date">
+    </div>
+    <div class="form-field">
+      <label class="form-label">Descrição</label>
+      <input class="form-input" type="text" id="ei-desc" placeholder="Notas ou nome do evento...">
+    </div>
+    <div class="form-actions">
+      <button class="btn-cancel" onclick="closeModal('modal-edit-inter')">Cancelar</button>
+      <button class="btn-save" onclick="saveEditInter()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: NOVO ENCONTRO -->
+<div class="modal-overlay" id="modal-encontro">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">🎉 Novo Encontro</div>
+    <div class="form-field">
+      <label class="form-label">Nome do encontro</label>
+      <input class="form-input" type="text" id="enc-nome" placeholder="ex: Churrasco, Culto, Jogo...">
+    </div>
+    <div class="form-field">
+      <label class="form-label">Data</label>
+      <input class="form-input" type="date" id="enc-data">
+    </div>
+    <div class="form-field">
+      <label class="form-label">Notas <span style="font-weight:400;color:var(--muted)">(opcional)</span></label>
+      <input class="form-input" type="text" id="enc-notas" placeholder="Observações...">
+    </div>
+    <!-- Presentes -->
+    <div class="form-field">
+      <label class="form-label">Presentes</label>
+      <div style="position:relative">
+        <input class="form-input" type="text" id="enc-pessoa-search" placeholder="Buscar jovem..." autocomplete="off"
+          oninput="acEncontro(this.value)" onfocus="acEncontro(this.value)" onblur="setTimeout(()=>{const d=document.getElementById('ac-enc-pessoa');if(d)d.style.display='none'},200)">
+        <div id="ac-enc-pessoa" style="display:none;position:absolute;z-index:200;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);width:100%;max-height:180px;overflow-y:auto;box-shadow:0 4px 16px rgba(0,0,0,0.1)"></div>
+      </div>
+    </div>
+    <!-- Lista de presentes selecionados -->
+    <div id="enc-presentes-list" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;min-height:28px"></div>
+    <div class="form-actions">
+      <button class="btn-cancel" onclick="closeModal('modal-encontro')">Cancelar</button>
+      <button class="btn-save" onclick="saveEncontro()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: MOTORISTA -->
+<div class="modal-overlay" id="modal-motorista">
+  <div class="modal-sheet" style="max-height:80vh;padding:16px 20px 24px;display:flex;flex-direction:column;">
+    <div class="modal-handle"></div>
+    <div class="modal-title" style="margin-bottom:12px">🚗 Adicionar carro</div>
+
+    <!-- Sugestões acima -->
+    <div id="ac-motorista-wrap" style="flex:1;overflow-y:auto;min-height:0;margin-bottom:8px;">
+      <div id="ac-motorista" style="display:none;"></div>
+      <div id="mot-empty" style="font-size:13px;color:var(--muted);padding:8px 0">Começa a escrever para buscar...</div>
+    </div>
+
+    <!-- Input fixo em baixo -->
+    <div>
+      <label class="form-label">Motorista</label>
+      <input class="form-input" type="text" id="mot-search" placeholder="Buscar na mocidade..."
+        autocomplete="off" oninput="acMotorista(this.value)" onfocus="acMotorista(this.value)"
+        style="font-size:15px;margin-bottom:8px">
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <input class="form-input" type="text" id="mot-outro" placeholder="Nome externo..." style="flex:1;font-size:14px">
+      </div>
+      <label class="form-label">Lugares no carro (com motorista)</label>
+      <select class="form-input" id="mot-lugares" style="margin-bottom:16px">
+        <option value="2">2 (1 passageiro)</option>
+        <option value="3">3 (2 passageiros)</option>
+        <option value="4">4 (3 passageiros)</option>
+        <option value="5" selected>5 (4 passageiros)</option>
+        <option value="6">6 (5 passageiros)</option>
+        <option value="7">7 (6 passageiros)</option>
+        <option value="8">8 (7 passageiros)</option>
+      </select>
+      <div style="display:flex;gap:8px">
+        <button class="btn-cancel" style="flex:1" onclick="closeModal('modal-motorista')">Cancelar</button>
+        <button class="btn-save" style="flex:2" onclick="saveMotorista()">✓ Adicionar carro</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: PERFIL JOVEM -->
+<div class="modal-overlay" id="modal-perfil">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">
+      <div>
+        <div id="perfil-nome" style="font-family:'Lora',serif;font-size:24px;font-weight:600;line-height:1.2"></div>
+        <div id="perfil-id" style="font-size:11px;color:var(--muted);font-family:monospace;margin-top:4px"></div>
+      </div>
+      <button onclick="openEditJovem()" style="background:var(--bg);border:1px solid var(--border);border-radius:100px;padding:6px 12px;font-size:12px;cursor:pointer;color:var(--muted);flex-shrink:0;margin-left:10px">✏️ Editar</button>
+    </div>
+
+    <div style="display:flex;gap:8px;margin:18px 0 16px">
+      <div class="filter-chip active" id="perfil-subtab-perfil" onclick="setPerfilSubTab('perfil')" style="flex:1;text-align:center;padding:9px;font-size:13px">Perfil</div>
+      <div class="filter-chip" id="perfil-subtab-interacoes" onclick="setPerfilSubTab('interacoes')" style="flex:1;text-align:center;padding:9px;font-size:13px">Interações</div>
+    </div>
+
+    <!-- ABA PERFIL -->
+    <div id="perfil-tab-perfil">
+      <div id="perfil-info-rows"></div>
+      <div style="margin-top:16px;background:var(--bg);border:1px dashed var(--border);border-radius:12px;padding:12px;text-align:center;font-size:12px;color:var(--muted)">📊 Ranking de presença — em breve</div>
+    </div>
+
+    <!-- ABA INTERAÇÕES -->
+    <div id="perfil-tab-interacoes" style="display:none">
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:20px">
+        <button class="pc-btn" id="pb-presente" onclick="openInterModal(perfilIdx,'presente')">🎁 Presente<span id="pb-presente-date">—</span></button>
+        <button class="pc-btn" id="pb-conversa" onclick="openInterModal(perfilIdx,'conversa')">💬 Conversa<span id="pb-conversa-date">—</span></button>
+        <button class="pc-btn" id="pb-viagem" onclick="openInterModal(perfilIdx,'viagem')">✈️ Viagem<span id="pb-viagem-date">—</span></button>
+        <button class="pc-btn" id="pb-outro" onclick="openInterModal(perfilIdx,'outro')">📝 Outro<span id="pb-outro-date">—</span></button>
+      </div>
+      <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:10px">Histórico completo</div>
+      <div id="perfil-hist"></div>
+    </div>
+
+    <div class="form-actions" style="margin-top:16px">
+      <button class="btn-cancel" onclick="closeModal('modal-perfil')">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: EDIT JOVEM -->
+<div class="modal-overlay" id="modal-edit-jovem">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Editar Jovem</div>
+    <div class="form-field"><label class="form-label">Nome</label><input class="form-input" type="text" id="ej-nome"></div>
+    <div class="form-field">
+      <label class="form-label">Gênero</label>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px">
+        <button type="button" id="ej-gen-f" onclick="selectGeneroEdit('F')"
+          style="padding:14px;border-radius:var(--radius);border:2px solid var(--border);background:var(--surface);font-size:15px;font-weight:600;cursor:pointer;transition:all 0.15s;color:var(--muted)">
+          👧 Menina
+        </button>
+        <button type="button" id="ej-gen-m" onclick="selectGeneroEdit('M')"
+          style="padding:14px;border-radius:var(--radius);border:2px solid var(--border);background:var(--surface);font-size:15px;font-weight:600;cursor:pointer;transition:all 0.15s;color:var(--muted)">
+          👦 Menino
+        </button>
+      </div>
+    </div>
+    <div class="form-field"><label class="form-label">Aniversário (dd/mm/aaaa)</label><input class="form-input" type="text" id="ej-aniv" placeholder="ex: 24/10/2008" oninput="formatAnivInput(this)" maxlength="10"></div>
+    <div id="ej-grupo-preview" style="font-size:12px;color:var(--accent3);padding:4px 0 8px 2px;display:none"></div>
+    <div class="form-field"><label class="form-label">Batismo (dd/mm/aaaa) <span style="font-weight:400;color:var(--muted)">(opcional)</span></label><input class="form-input" type="text" id="ej-batismo" placeholder="ex: 12/06/2018" oninput="formatDateSimples(this)" maxlength="10"></div>
+    <div class="form-field"><label class="form-label">Telefone</label><input class="form-input" type="text" id="ej-tel"></div>
+    <div class="form-field"><label class="form-label">Observações</label><input class="form-input" type="text" id="ej-obs"></div>
+    <div class="form-field">
+      <label class="form-label">Irmãos</label>
+      <div id="ej-irmaos-list" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px"></div>
+      <div style="position:relative">
+        <input class="form-input" type="text" id="ej-irmao-search" placeholder="Buscar jovem..." autocomplete="off"
+          oninput="acIrmao(this.value)" onfocus="acIrmao(this.value)"
+          onblur="setTimeout(()=>{const d=document.getElementById('ac-irmao');if(d)d.style.display='none'},200)"
+          style="font-size:14px">
+        <div id="ac-irmao" style="display:none;position:absolute;z-index:200;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);width:100%;max-height:180px;overflow-y:auto;box-shadow:0 4px 16px rgba(0,0,0,0.1)"></div>
+      </div>
+    </div>
+    <div class="form-field">
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px;font-weight:500">
+        <input type="checkbox" id="ej-ativo" style="width:18px;height:18px;accent-color:var(--accent);cursor:pointer" onchange="toggleMotivoInativo()">
+        <span>Na Mocidade</span>
+      </label>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px;margin-left:28px">Desmarcado → sai do tracker mas permanece no banco de dados e nos aniversários</div>
+    </div>
+    <div id="ej-motivo-wrap" class="form-field" style="display:none;background:var(--bg);border-radius:var(--radius);padding:12px">
+      <label class="form-label">Motivo</label>
+      <select class="form-input" id="ej-motivo" onchange="toggleMotivoCampos()">
+        <option value="generico">Inativo</option>
+        <option value="casamento">💍 Casamento</option>
+        <option value="mudanca">📦 Mudança</option>
+      </select>
+
+      <div id="ej-motivo-casamento" style="display:none;margin-top:10px">
+        <label class="form-label">Cônjuge</label>
+        <div style="position:relative;margin-bottom:8px">
+          <input class="form-input" type="text" id="ej-conjuge-search" placeholder="Buscar jovem da mocidade..." autocomplete="off"
+            oninput="acConjuge(this.value)" onfocus="acConjuge(this.value)"
+            onblur="setTimeout(()=>{const d=document.getElementById('ac-conjuge');if(d)d.style.display='none'},200)"
+            style="font-size:14px">
+          <div id="ac-conjuge" style="display:none;position:absolute;z-index:200;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);width:100%;max-height:180px;overflow-y:auto;box-shadow:0 4px 16px rgba(0,0,0,0.1)"></div>
+        </div>
+        <input class="form-input" type="text" id="ej-conjuge-outro" placeholder="ou nome de fora da mocidade..." style="margin-bottom:8px;font-size:14px">
+        <label class="form-label">Data do casamento</label>
+        <input class="form-input" type="text" id="ej-data-casamento" placeholder="ex: 12/06/2026" oninput="formatDateSimples(this)" maxlength="10">
+      </div>
+
+      <div id="ej-motivo-mudanca" style="display:none;margin-top:10px">
+        <label class="form-label">Cidade ou país</label>
+        <input class="form-input" type="text" id="ej-mudanca-local" placeholder="ex: Lisboa, Portugal">
+      </div>
+    </div>
+    <div class="form-field">
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px;font-weight:500">
+        <input type="checkbox" id="ej-excluir-ranking" style="width:18px;height:18px;accent-color:var(--accent);cursor:pointer">
+        <span>Não contar na estatística de presença</span>
+      </label>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px;margin-left:28px">Continua a poder ser marcado nas sessões, mas não aparece no Ranking (ex: trabalha aos domingos)</div>
+    </div>
+    <div class="form-field">
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px;font-weight:500">
+        <input type="checkbox" id="ej-auxiliar" style="width:18px;height:18px;accent-color:var(--accent);cursor:pointer">
+        <span>🖋️ Auxiliar</span>
+      </label>
+    </div>
+    <div class="form-actions"><button class="btn-cancel" onclick="closeModal('modal-edit-jovem')">Cancelar</button><button class="btn-save" onclick="saveEditJovem()">Salvar</button></div>
+    <div style="margin-top:14px;text-align:center">
+      <span onclick="delJovemFromPerfil()" style="display:inline-block;cursor:pointer;color:#E07B54;font-size:13px;padding:8px 16px;border-radius:100px;border:1px solid #fbddd5;background:#FFF8F6">🗑 Remover jovem</span>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: SESSÃO DE PRESENÇA (RDJ) -->
+<div class="modal-overlay" id="modal-sessao-presenca">
+  <div class="modal-sheet" style="max-height:88vh;overflow-y:auto">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="sessao-modal-title">Nova RDJ</div>
+    <div class="form-field"><label class="form-label">Data</label><input class="form-input" type="date" id="sessao-data"></div>
+    <div class="form-field">
+      <label class="form-label">Presença</label>
+      <div id="sessao-jovens-list"></div>
+    </div>
+    <div id="sessao-conflitos-wrap" style="display:none">
+      <div class="form-field">
+        <label class="form-label" style="color:#C07D14">⚠️ Registos não identificados</label>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Estes nomes antigos não correspondem claramente a um jovem atual (ex: nome ambíguo ou renomeado). Escolhe a quem pertence, ou ignora para descartar.</div>
+        <div id="sessao-conflitos-list"></div>
+      </div>
+    </div>
+    <div class="form-actions" style="flex-wrap:wrap;gap:8px">
+      <button class="btn-cancel" onclick="closeModal('modal-sessao-presenca')">Cancelar</button>
+      <button id="sessao-del-btn" onclick="delSessaoPresenca()" style="display:none;background:none;border:1px solid #fbddd5;color:#E07B54;border-radius:100px;padding:10px 16px;font-size:12px;cursor:pointer;font-family:inherit">🗑 Remover</button>
+      <button class="btn-save" onclick="saveSessaoPresenca()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: EVENTO AGENDA -->
+<div class="modal-overlay" id="modal-evento">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="evento-modal-title">Evento</div>
+    <div class="form-field"><label class="form-label">Tipo</label>
+      <select class="form-input" id="ev-tipo">
+        <option value="RDM">RDM — Reunião da Mocidade</option>
+        <option value="RMA">RMA — Reunião Ministerial Administrativa</option>
+        <option value="RMN">RMN — Reunião Ministerial Nacional</option>
+        <option value="RGI">RGI — Reunião Geral de Ensinamentos</option>
+        <option value="Reunião Ministerial / Conselhos">Reunião Ministerial / Conselhos</option>
+        <option value="Busca dos Dons">Busca dos Dons</option>
+        <option value="Batismo">Batismo</option>
+        <option value="Ensaio Regional">Ensaio Regional</option>
+        <option value="RDJ">RDJ — Reunião de Jovens</option>
+        <option value="Santa Ceia">Santa Ceia</option>
+        <option value="Culto">Culto</option>
+        <option value="Outro">Outro</option>
+      </select>
+    </div>
+    <div class="form-field"><label class="form-label">Título</label><input class="form-input" type="text" id="ev-titulo" placeholder="ex: RDM - Pianezza"></div>
+    <div class="form-field"><label class="form-label">Data</label><input class="form-input" type="date" id="ev-data"></div>
+    <div class="form-field"><label class="form-label">Hora</label><input class="form-input" type="time" id="ev-hora"></div>
+    <div class="form-field"><label class="form-label">Local</label>
+      <div class="ac-wrap">
+        <input class="form-input" type="text" id="ev-local-input" placeholder="Buscar ou escrever local..." autocomplete="off"
+          oninput="acLocal(this,'ac-ev-local')" onfocus="acLocal(this,'ac-ev-local')" onblur="setTimeout(()=>hideAc('ac-ev-local'),200)">
+        <div class="ac-dropdown" id="ac-ev-local" style="display:none"></div>
+      </div>
+    </div>
+    <div class="form-field"><label class="form-label">Palavra (livro cap:vers)</label>
+      <div style="position:relative">
+        <input class="form-input" type="text" id="ev-palavra" placeholder="ex: João 3:16"
+          autocomplete="off" oninput="acPalavra(this,'ac-ev-palavra')" onblur="setTimeout(()=>hideAc('ac-ev-palavra'),200)">
+        <div id="ac-ev-palavra" class="ac-dropdown" style="display:none"></div>
+      </div>
+    </div>
+    <div class="form-field"><label class="form-label">Notas</label><input class="form-input" type="text" id="ev-notas" placeholder="Observações livres"></div>
+    <div class="form-actions"><button class="btn-cancel" onclick="closeModal('modal-evento')">Cancelar</button><button class="btn-save" id="ev-save-btn" onclick="saveEvento()">Salvar</button></div>
+  </div>
+</div>
+
+<!-- MODAL: INTERAÇÃO -->
+<div class="modal-overlay" id="modal-inter">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="inter-title">Interação</div>
+    <div class="form-field"><label class="form-label">Data</label><input class="form-input" type="date" id="inter-date"></div>
+    <div class="form-field"><label class="form-label">Tipo</label>
+      <select class="form-input" id="inter-tipo">
+        <option value="presente">🎁 Presente dado</option><option value="conversa">💬 Conversa / contato</option>
+        <option value="viagem">✈️ Viagem realizada</option><option value="outro">📝 Outro</option>
+      </select>
+    </div>
+    <div class="form-field" id="inter-outro-wrap" style="display:none"><label class="form-label">Descreva</label><input class="form-input" type="text" id="inter-outro" placeholder="Descreva a interação..."></div>
+    <div style="margin-bottom:12px"><label class="form-label">Histórico</label><div id="inter-hist"></div></div>
+    <div class="form-actions"><button class="btn-cancel" onclick="closeModal('modal-inter')">Fechar</button><button class="btn-save" onclick="saveInter()">Adicionar</button></div>
+  </div>
+</div>
+
+<!-- MODAL: DIA DO CALENDÁRIO -->
+<div class="modal-overlay" id="modal-dia">
+  <div class="modal-sheet" style="max-height:80vh">
+    <div class="modal-handle"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div class="modal-title" id="dia-titulo" style="margin-bottom:0"></div>
+      <button onclick="openNovoEventoNoDia()" style="background:var(--accent3);color:white;border:none;border-radius:100px;padding:6px 14px;font-size:12px;font-weight:500;cursor:pointer">+ Novo</button>
+    </div>
+    <div id="dia-eventos"></div>
+  </div>
+</div>
+
+<!-- MODAL: DIÁLOGO DO SISTEMA (substitui os alert/confirm nativos do navegador — D10) -->
+<!-- MODAL: BOAS-VINDAS (dispositivo sem dados) -->
+<div class="modal-overlay" id="modal-boasvindas">
+  <div class="modal-sheet" style="padding-bottom:28px">
+    <div class="modal-handle"></div>
+    <div style="font-family:'Lora',serif;font-size:20px;font-weight:600;margin-bottom:6px">Bem-vindo ao Chazak 🌾</div>
+    <div style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:16px">Este dispositivo ainda não tem dados. Entra com a tua conta para carregar tudo da nuvem.</div>
+    <input class="form-input" type="email" id="bv-email" placeholder="Email" autocomplete="username" style="margin-bottom:8px">
+    <input class="form-input" type="password" id="bv-pass" placeholder="Palavra-passe" autocomplete="current-password" style="margin-bottom:10px">
+    <button class="btn-save" id="bv-login-btn" style="width:100%;margin-bottom:14px" onclick="entrarBoasVindas()">Entrar</button>
+    <details style="margin-bottom:14px">
+      <summary style="font-size:13px;color:var(--muted);cursor:pointer;margin-bottom:10px">Outras formas de carregar os dados</summary>
+      <input class="form-input" type="password" id="bv-token-input" placeholder="Token do GitHub (github_pat_...)" autocomplete="off" style="margin-bottom:8px">
+      <button class="btn-outline" id="bv-gist-btn" style="width:100%;margin-bottom:8px" onclick="iniciarComGist()">☁️ Carregar do Gist</button>
+      <button class="btn-outline" style="width:100%" onclick="closeModal('modal-boasvindas');importData()">⬆ Importar ficheiro JSON</button>
+    </details>
+    <div style="text-align:center"><span style="font-size:12px;color:var(--muted);text-decoration:underline;cursor:pointer" onclick="dispensarBoasVindas()">Começar vazio</span></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-chz-dialog">
+  <div class="modal-sheet" style="padding-bottom:28px">
+    <div class="modal-handle"></div>
+    <div id="chz-dialog-message" style="font-size:14px;line-height:1.6;white-space:pre-wrap;margin-bottom:20px"></div>
+    <div class="form-actions" id="chz-dialog-actions"></div>
+  </div>
+</div>
+
+
+<!-- MODAL: NOVO / EDITAR SERVIÇO -->
+<div class="modal-overlay" id="modal-servico">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="serv-modal-title">Novo Serviço</div>
+    <div class="form-field"><label class="form-label">Tipo</label>
+      <select class="form-input" id="serv-tipo">
+        <option value="Culto" selected>Culto</option>
+        <option value="RDM">RDM — Reunião da Mocidade</option>
+        <option value="RDJ">RDJ — Reunião de Jovens</option>
+        <option value="RMA">RMA — Reunião Ministerial Administrativa</option>
+        <option value="RMN">RMN — Reunião Ministerial Nacional</option>
+        <option value="RGI">RGI — Reunião Geral de Ensinamentos</option>
+        <option value="Reunião Ministerial / Conselhos">Reunião Ministerial / Conselhos</option>
+        <option value="Busca dos Dons">Busca dos Dons</option>
+        <option value="Batismo">Batismo</option>
+        <option value="Ensaio Regional">Ensaio Regional</option>
+        <option value="Santa Ceia">Santa Ceia</option>
+        <option value="Outro">Outro</option>
+      </select>
+    </div>
+    <div class="form-field"><label class="form-label">Data</label><input class="form-input" type="date" id="serv-data"></div>
+    <div class="form-field"><label class="form-label">Local</label>
+      <div style="position:relative">
+        <input class="form-input" type="text" id="serv-local-input" placeholder="Collechio (Parma)..."
+          autocomplete="off" oninput="acLocal(this,'ac-serv-local')" onfocus="acLocal(this,'ac-serv-local')" onblur="setTimeout(()=>hideAc('ac-serv-local'),200)">
+        <div id="ac-serv-local" class="ac-dropdown" style="display:none"></div>
+      </div>
+    </div>
+    <div class="form-field"><label class="form-label">Palavra (livro cap:vers)</label>
+      <div style="position:relative">
+        <input class="form-input" type="text" id="serv-palavra" placeholder="ex: João 3:16"
+          autocomplete="off" oninput="acPalavra(this,'ac-serv-palavra')" onblur="setTimeout(()=>hideAc('ac-serv-palavra'),200)">
+        <div id="ac-serv-palavra" class="ac-dropdown" style="display:none"></div>
+      </div>
+    </div>
+    <div class="form-field"><label class="form-label">Recitativos</label><input class="form-input" type="text" id="serv-recitativos" placeholder="ex: 18"></div>
+    <div class="form-field"><label class="form-label">Notas</label><textarea class="form-input" id="serv-notas" rows="3" placeholder="Observações..." style="resize:vertical;font-family:inherit"></textarea></div>
+    <div class="form-actions">
+      <button class="btn-cancel" onclick="closeModal('modal-servico')">Cancelar</button>
+      <button class="btn-save" onclick="saveServico()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: NOVA / EDITAR LEITURA -->
+<div class="modal-overlay" id="modal-leitura">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="leit-modal-title">Registrar Leitura</div>
+    <div class="form-field"><label class="form-label">Passagem (ex: João 3 ou Rm 8:1-17)</label><input class="form-input" type="text" id="leit-passagem" placeholder="Livro cap ou cap:vers-vers"></div>
+    <div class="form-field"><label class="form-label">Data</label><input class="form-input" type="date" id="leit-data"></div>
+    <div class="form-field"><label class="form-label">Notas / reflexão</label>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:6px">**negrito** · - lista · [Jo 3:16] versículo · ==verde== · ~~azul~~ · !!rosa!!</div>
+      <textarea class="form-input" id="leit-notas" rows="3" placeholder="O que marcou..." style="resize:vertical;font-family:inherit"></textarea></div>
+    <div class="form-actions">
+      <button class="btn-cancel" onclick="closeModal('modal-leitura')">Cancelar</button>
+      <button class="btn-save" onclick="saveLeitura()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: NOVA / EDITAR CURIOSIDADE -->
+<div class="modal-overlay" id="modal-curiosidade">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="cur-modal-title">Nova Nota</div>
+    <div class="form-field"><label class="form-label">Categoria</label>
+      <select class="form-input" id="cur-categoria">
+        <option value="Significado">📖 Significado</option>
+        <option value="Onde está escrito">📍 Onde está escrito</option>
+        <option value="Curiosidades">🧐 Curiosidades</option>
+        <option value="Aprofundamento">🔬 Aprofundamento</option>
+        <option value="Biografia">👤 Biografia</option>
+        <option value="Etimologia">🔤 Etimologia</option>
+      </select>
+    </div>
+    <div class="form-field"><label class="form-label">Título</label><input class="form-input" type="text" id="cur-titulo" placeholder="Ex: Significado de Amém"></div>
+    <div class="form-field"><label class="form-label">Versículo(s) de referência</label>
+      <div style="position:relative">
+        <input class="form-input" type="text" id="cur-passagem" placeholder="ex: Rm 8:1 ou Jo 3:16"
+          autocomplete="off" oninput="acPalavra(this,'ac-cur-passagem')" onblur="setTimeout(()=>hideAc('ac-cur-passagem'),200)">
+        <div id="ac-cur-passagem" class="ac-dropdown" style="display:none"></div>
+      </div>
+    </div>
+    <div class="form-field">
+      <label class="form-label">Conteúdo</label>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:6px">**negrito** · - lista · [Jo 3:16] versículo em destaque · ==verde== · ~~azul~~ · !!rosa!!</div>
+      <textarea class="form-input" id="cur-texto" rows="8" placeholder="Escreve o conteúdo da nota..." style="resize:vertical;font-family:inherit;font-size:13px;line-height:1.6"></textarea>
+    </div>
+    <div class="form-actions">
+      <button class="btn-cancel" onclick="closeModal('modal-curiosidade')">Cancelar</button>
+      <button class="btn-save" id="cur-save-btn" onclick="saveCuriosidade()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: NOVO / EDITAR FAVORITO -->
+<div class="modal-overlay" id="modal-favorito">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="fav-modal-title">Novo Favorito</div>
+    <div class="form-field"><label class="form-label">Referência (ex: João 3:16)</label><input class="form-input" type="text" id="fav-ref" placeholder="Livro cap:vers"></div>
+    <div class="form-field"><label class="form-label">Texto do versículo</label>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:6px">**negrito** · ==verde== · ~~azul~~ · !!rosa!!</div>
+      <textarea class="form-input" id="fav-texto" rows="4" placeholder="Escreve o versículo..." style="resize:vertical;font-family:inherit"></textarea></div>
+    <div class="form-field"><label class="form-label">Nota pessoal</label>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:6px">**negrito** · ==verde== · ~~azul~~ · !!rosa!!</div>
+      <input class="form-input" type="text" id="fav-nota" placeholder="Por que este versículo te marcou..."></div>
+    <div class="form-actions">
+      <button class="btn-cancel" onclick="closeModal('modal-favorito')">Cancelar</button>
+      <button class="btn-save" onclick="saveFavorito()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: NOVO LIVRO -->
+<div class="modal-overlay" id="modal-novo-livro">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Novo Livro</div>
+    <div class="form-field"><label class="form-label">Livro da Bíblia</label>
+      <div style="position:relative">
+        <input class="form-input" type="text" id="novo-livro-input" placeholder="ex: Josué, Romanos..."
+          autocomplete="off" oninput="acPalavra(this,'ac-novo-livro')" onblur="setTimeout(()=>hideAc('ac-novo-livro'),200)">
+        <div id="ac-novo-livro" class="ac-dropdown" style="display:none"></div>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-cancel" onclick="closeModal('modal-novo-livro')">Cancelar</button>
+      <button class="btn-save" onclick="salvarNovoLivro()">Criar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: CAPÍTULO -->
+<div class="modal-overlay" id="modal-capitulo">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="cap-modal-title">Novo Capítulo</div>
+    <div class="form-field"><label class="form-label">Número do capítulo</label>
+      <input class="form-input" type="number" id="cap-num" min="1" placeholder="ex: 1">
+    </div>
+    <div class="form-field">
+      <label class="form-label">Explicação</label>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:6px">**negrito** · - lista · [Jo 3:16] versículo · ==verde== · ~~azul~~ · !!rosa!!</div>
+      <textarea class="form-input" id="cap-texto" rows="8" placeholder="Resumo do capítulo..." style="resize:vertical;font-family:inherit;font-size:13px;line-height:1.6"></textarea>
+    </div>
+    <div class="form-actions">
+      <button class="btn-cancel" onclick="closeModal('modal-capitulo')">Cancelar</button>
+      <button class="btn-save" onclick="salvarCapitulo()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: DICIONÁRIO -->
+<div class="modal-overlay" id="modal-dicionario">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="dict-modal-title">Novo Termo</div>
+    <div class="form-field"><label class="form-label">Termo</label>
+      <input class="form-input" type="text" id="dict-termo" placeholder="ex: Jugo, Moisés...">
+    </div>
+    <div class="form-field"><label class="form-label">Definição</label>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:6px">**negrito** · - lista · [Jo 3:16] versículo · ==verde== · ~~azul~~ · !!rosa!!</div>
+      <textarea class="form-input" id="dict-def" rows="4" placeholder="O que significa..." style="resize:vertical;font-family:inherit;font-size:13px"></textarea>
+    </div>
+    <div class="form-actions">
+      <button class="btn-cancel" onclick="closeModal('modal-dicionario')">Cancelar</button>
+      <button class="btn-save" onclick="salvarDicionario()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: VERSÍCULO BONITO -->
+<div class="modal-overlay" id="modal-versiculo-livro">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="vers-modal-title">Novo Versículo</div>
+    <div class="form-field"><label class="form-label">Referência</label>
+      <div style="position:relative">
+        <input class="form-input" type="text" id="vers-ref" placeholder="ex: Josué 1:8"
+          autocomplete="off" oninput="acPalavra(this,'ac-vers-ref')" onblur="setTimeout(()=>hideAc('ac-vers-ref'),200)">
+        <div id="ac-vers-ref" class="ac-dropdown" style="display:none"></div>
+      </div>
+    </div>
+    <div class="form-field"><label class="form-label">Texto do versículo</label>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:6px">**negrito** · ==verde== · ~~azul~~ · !!rosa!!</div>
+      <textarea class="form-input" id="vers-texto" rows="4" placeholder="Escreve o versículo..." style="resize:vertical;font-family:inherit;font-size:13px;line-height:1.6"></textarea>
+    </div>
+    <div class="form-actions">
+      <button class="btn-cancel" onclick="closeModal('modal-versiculo-livro')">Cancelar</button>
+      <button class="btn-save" onclick="salvarVersiculo()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: VER NOTA COMPLETA -->
+<div class="modal-overlay" id="modal-ver-nota">
+  <div class="modal-sheet" style="max-height:90vh;overflow-y:auto">
+    <div class="modal-handle"></div>
+    <div id="ver-nota-conteudo"></div>
+  </div>
+</div>
+
+</body>
+</html>
